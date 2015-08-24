@@ -18,6 +18,8 @@ private class Point2D
   }
 }
 
+final int kSmoothingFactor = 10;
+
 final float colorVariation = 30;
 final float blobWidth = 12;
 final float blobbiness = 14;
@@ -26,7 +28,8 @@ final float initialColorMotion = 3;
 
 public class Blob
 {
-  public float x;
+  private float x;
+  private LinkedList<Float> xVelocities;
   public float y;
   
   private color baseColor;
@@ -36,9 +39,14 @@ public class Blob
   private Point2D[] blobPointMotion;
   private color[] blobColorMotion;
   
-  public Blob(float initialX) {
-    x = initialX;
+  // TODO: These really don't belong to blob, they should be on tracking target.
+  public int lastSeen;
+  public boolean awol;
+  
+  public Blob() {
+    x = -1;
     y = height / 2;
+    xVelocities = new LinkedList<Float>();
     
     int subBlobs = 40;
     blobPoints = new Point2D[subBlobs];
@@ -51,7 +59,7 @@ public class Blob
 //           red(baseColor) + green(baseColor) + blue(baseColor) > 200) {
 //      baseColor = color(random(0, 100), random(0, 100), random(0, 100));
 //    }
-    println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
+    //println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
     
     for (int i = 0; i < blobPoints.length; ++i) {
       float ellipseX = random(-blobbiness, blobbiness);
@@ -66,7 +74,7 @@ public class Blob
       float green = constrain(green(baseColor) + random(-colorVariation, colorVariation), 0, 100);
       float blue = constrain(blue(baseColor) + random(-colorVariation, colorVariation), 0, 100);
       
-      println("sub blob color = " + red + ", "+green+", "+blue);      
+      //println("sub blob color = " + red + ", "+green+", "+blue);      
       
       blobColors[i] = color(red, green, blue);
       blobColorMotion[i] = color(random(-initialColorMotion, initialColorMotion), 
@@ -75,22 +83,56 @@ public class Blob
     }
   }
   
+  public float getX()
+  {
+    return x;
+  }
+  
+  public void setX(float newX)
+  {
+    if (x != -1) {
+      xVelocities.add(newX - x);
+      if (xVelocities.size() > kSmoothingFactor) {
+        xVelocities.removeFirst();
+      }
+    }
+    x = newX;
+  }
+  
+  public void coast()
+  {
+    float smoothedVelocity = 0;
+    if (xVelocities.size() > 0) {
+      for (Float f : xVelocities) {
+        smoothedVelocity += f;
+      }
+      smoothedVelocity /= xVelocities.size();
+    }
+    //println("Coasting blob " + this + " at " + smoothedVelocity);
+    //setX(x + smoothedVelocity);
+    x += smoothedVelocity;
+  }
+  
   private float subBlobDistance(int i)
   {
     Point2D sub = blobPoints[i];
     return sqrt((sub.x * sub.x + sub.y * sub.y));
   }
   
-  private float subBlobColorDistance(int i)
-  {
-    color subColor = blobColors[i];
-    return sqrt((red(baseColor) - red(subColor)) * (red(baseColor) - red(subColor)) +
-                (green(baseColor) - green(subColor)) * (green(baseColor) - green(subColor)) +
-                (blue(baseColor) - blue(subColor)) * (blue(baseColor) - blue(subColor)));
-  }
+  //private float subBlobColorDistance(int i)
+  //{
+  //  color subColor = blobColors[i];
+  //  return sqrt((red(baseColor) - red(subColor)) * (red(baseColor) - red(subColor)) +
+  //              (green(baseColor) - green(subColor)) * (green(baseColor) - green(subColor)) +
+  //              (blue(baseColor) - blue(subColor)) * (blue(baseColor) - blue(subColor)));
+  //}
   
   public void draw()
   {
+    drift();
+    
+    blendMode(BLEND);
+    colorMode(RGB, 100);
     noStroke();
     for (int i = 0; i < blobPoints.length; ++i) {
       Point2D sub = blobPoints[i];
@@ -107,12 +149,13 @@ public class Blob
     }    
   }
   
-  public void drift()
+  private void drift()
   {
+    // Shift the subblobs around to make the colors move
     for (int i = 0; i < blobPoints.length; ++i) {
       // Drift position of sub blobs
       {
-        Point2D sub = blobPoints[i];
+        //Point2D sub = blobPoints[i];
         float distance = subBlobDistance(i);
         // pull towards center proportional to distance so sub blobs don't escape
         blobPointMotion[i].x += -blobPoints[i].x * distance * 0.0001;
@@ -123,12 +166,12 @@ public class Blob
       
       // Drift color of sub blobs
       {
-        color sub = blobColors[i];
-        float distance = subBlobColorDistance(i);
+        //color sub = blobColors[i];
+        //float distance = subBlobColorDistance(i);
         // pull towards center proportional to distance so sub blobs don't escape
-        float redMotion = red(blobColorMotion[i]) + (red(baseColor) - red(blobColors[i])) * distance * 0.1;
-        float greenMotion = green(blobColorMotion[i]) + (green(baseColor) - green(blobColors[i])) * distance * 0.1;
-        float blueMotion = blue(blobColorMotion[i]) + (blue(baseColor) - blue(blobColors[i])) * distance * 0.1;
+        //float redMotion = red(blobColorMotion[i]) + (red(baseColor) - red(blobColors[i])) * distance * 0.1;
+        //float greenMotion = green(blobColorMotion[i]) + (green(baseColor) - green(blobColors[i])) * distance * 0.1;
+        //float blueMotion = blue(blobColorMotion[i]) + (blue(baseColor) - blue(blobColors[i])) * distance * 0.1;
         
 //        float red = constrain(red(blobColors[i]) + red(blobColorMotion[i]), 0, 100); 
 //        float green = constrain(green(blobColors[i]) + green(blobColorMotion[i]), 0, 100);
@@ -140,33 +183,41 @@ public class Blob
   }
 }
 
-Blob[] blobs = null;
+//Blob[] blobs = null;
 
-void reset_blob()
-{
-  blobs = new Blob[1];
-  blobs[0] = new Blob(followLead);
-}
+//void reset_blob()
+//{
+//  blobs = new Blob[1];
+//  blobs[0] = new Blob();
+//}
 
-void mouse_blob()
-{
-  blendMode(BLEND);
-  colorMode(RGB, 100);
-  if (blobs == null) {
-    reset_blob();
-  }
-  
-  blobs[0].draw();
-  blobs[0].drift();
-  blobs[0].x = followLead;
-  
-  blendMode(SUBTRACT);
-  fill(2, 2, 2, 100);
-  rect(0, 0, width, height);
-  
-//  if (mouseMoved) {
-//    blob_centered_at(followLead);
-//    mouseMoved = false;
+//void mouse_blob()
+//{
+//  println("MOUSE BLOBK");
+//  blendMode(BLEND);
+//  colorMode(RGB, 100);
+//  if (blobs == null) {
+//    reset_blob();
 //  }
-}
-
+  
+//  KinectReader reader = new KinectReader();
+//  List<TrackingTarget> targets = reader.trackedTargets();
+//  println("Targets = " + targets);
+//  if (targets != null) {
+//    for (TrackingTarget tt : targets) {
+//     blobs[0].x = tt.position;
+//     blobs[0].drift();
+//     blobs[0].draw();
+//     break;
+//    }
+//  }
+  
+//  blendMode(SUBTRACT);
+//  fill(2, 2, 2, 100);
+//  rect(0, 0, width, height);
+  
+////  if (mouseMoved) {
+////    blob_centered_at(followLead);
+////    mouseMoved = false;
+////  }
+//}

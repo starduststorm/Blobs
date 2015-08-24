@@ -12,66 +12,44 @@ import com.heroicrobot.dropbit.devices.pixelpusher.PusherCommand;
 
 import java.util.*;
 
-private Random random = new Random();
-
 DeviceRegistry registry;
 
-void spamCommand(PixelPusher p, PusherCommand pc) {
-   for (int i=0; i<3; i++) {
-    p.sendCommand(pc);
-  }
-}
+//void spamCommand(PixelPusher p, PusherCommand pc) {
+//   for (int i=0; i<3; i++) {
+//    p.sendCommand(pc);
+//  }
+//}
 
 class TestObserver implements Observer {
   public boolean hasStrips = false;
   public void update(Observable registry, Object updatedDevice) {
-    println("Registry changed!");
+    //println("Registry changed!");
     if (updatedDevice != null) {
-      println("Device change: " + updatedDevice);
+      //println("Device change: " + updatedDevice);
     }
     this.hasStrips = true;
   }
 }
 
 TestObserver testObserver;
+BlobManager blobManager;
 
 void setup() {
-  size(240, 8, P3D); // 5 tall for every strip
+  size(240, 8, P3D);
   registry = new DeviceRegistry();
+  //registry.setLogging(false);
   testObserver = new TestObserver();
   registry.addObserver(testObserver);
   frameRate(60);
   prepareExitHandler();
+  
+  //blobManager = new BlobManager();
 }
 
-boolean tracking = false;
-float lineSide = 1;
-int followLead = 0;
-int sign = 1;
-boolean mouseMoved = false;
-
-void mouseMoved()
-{
-  if (tracking) {
-    followLead = width - mouseX;
-    mouseMoved = true;
-  }
-//  println("mouse = (" + mouseX + ", " + mouseY + ")");
-}
-
-void mouseClicked()
-{
-  if (mouseButton == LEFT) {
-    tracking = !tracking;
-  } else {
-    reset_blob();
-  }
-}
-
-float mod_distance(float a, float b, float m)
-{
-  return abs(m / 2. - ((3 * m) / 2 + a - b) % m);
-}
+//float mod_distance(float a, float b, float m)
+//{
+//  return abs(m / 2. - ((3 * m) / 2 + a - b) % m);
+//}
 
 boolean first = true;
 
@@ -89,16 +67,18 @@ void draw()
       first = false;
    }
    
-    if (!tracking) { 
-      followLead++;
-    }
-    followLead = followLead % width;
     int numStrips = strips.size();
     if (numStrips == 0)
       return;
+     
     
-    mouse_blob();
+    blobManager.update();
     
+    // Fade out the old blobs
+    blendMode(SUBTRACT);
+    fill(2, 2, 2, 100);
+    rect(0, 0, width, height);
+        
     // Render the scene
     int x=0;
     int y=0;
@@ -137,4 +117,3 @@ private void prepareExitHandler () {
   }
   ));
 }
-
