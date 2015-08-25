@@ -2,8 +2,8 @@ public class BlobManager
 {
   KinectReader reader;
   HashMap<String, Blob> blobs;
-   HashMap<String,Blob> awolBlobs;
-
+  HashMap<String,Blob> awolBlobs;
+  
   public BlobManager()
   {
     reader = new KinectReader();
@@ -12,11 +12,11 @@ public class BlobManager
     awolBlobs = new HashMap<String,Blob>();
     
   }
-
+  
   public void update()
   { 
     HashMap<String,TrackingTarget> targets = reader.trackedTargets();
-   
+    
     if (targets != null && targets.size() > 0) {
       for (TrackingTarget tt : targets.values()) {
         float targetPosition = tt.position * width;
@@ -58,6 +58,9 @@ public class BlobManager
           blob.lastSeen = millis();
           blob.awol = false;
           blob.setX(targetPosition);
+          
+          blob.setLeftHandOut(tt.leftHandOut);
+          blob.setRightHandOut(tt.rightHandOut);
         }
       }
     }
@@ -86,7 +89,7 @@ public class BlobManager
       Blob awolBlob = (Blob)pair.getValue();
       String awolID = (String)pair.getKey();
       //println("awol blob " + awolID + " last seen " + (millis() - awolBlob.lastSeen) + " millis ago");
-      if (millis() - awolBlob.lastSeen > 1000) {
+      if (millis() - awolBlob.lastSeen > 3000) {
         println("Expiring awol blob" + awolID);
         it.remove();
       }

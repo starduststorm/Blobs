@@ -1,10 +1,10 @@
 
 final color[] kGoodBaseColors = { 
    #FF0000, #00FF00, #0000FF, #FFFF00, #FF00FF, #00FFFF,   
-   #800000, #008000, #000080, #808000, #800080, #008080, #808080,  
+   #808000, #800080, #008080, #808080,  
    #C00000, #00C000, #0000C0, #C0C000, #C000C0, #00C0C0, #C0C0C0,  
-   #600000, #006000, #000060, #606000, #600060, #006060, #606060,  
-   #A00000, #00A000, #0000A0, #A0A000, #A000A0, #00A0A0, #A0A0A0,  
+   #606000, #600060, #006060, #606060, 
+   #A0A000, #A000A0, #00A0A0, #A0A0A0,  
    #E00000, #00E000, #0000E0, #E0E000, #E000E0, #00E0E0, #E0E0E0,  
 };
 
@@ -20,7 +20,7 @@ private class Point2D
 
 final int kSmoothingFactor = 10;
 
-final float colorVariation = 30;
+final float colorVariation = 40;
 final float blobWidth = 12;
 final float blobbiness = 14;
 final float initialMotion = 0.03;
@@ -43,23 +43,30 @@ public class Blob
   public int lastSeen;
   public boolean awol;
   
+  boolean leftHandOut;
+  boolean rightHandOut;
+  
+  private ArrayList<Blobby> blobbies;
+  
   public Blob() {
     x = -1;
     y = height / 2;
     xVelocities = new LinkedList<Float>();
     
-    int subBlobs = 40;
+    int subBlobs = (int)random(7, 40);
     blobPoints = new Point2D[subBlobs];
     blobPointMotion = new Point2D[subBlobs];
     blobColors = new color[subBlobs];
     blobColorMotion = new color[subBlobs];
+    
+    blobbies = new ArrayList<Blobby>();
     
     baseColor = kGoodBaseColors[(int)random(0, kGoodBaseColors.length)];
 //    while (red(baseColor) + green(baseColor) + blue(baseColor) < 40 ||
 //           red(baseColor) + green(baseColor) + blue(baseColor) > 200) {
 //      baseColor = color(random(0, 100), random(0, 100), random(0, 100));
 //    }
-    //println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
+    println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
     
     for (int i = 0; i < blobPoints.length; ++i) {
       float ellipseX = random(-blobbiness, blobbiness);
@@ -70,9 +77,12 @@ public class Blob
       blobPointMotion[i] = new Point2D(random(-initialMotion, initialMotion), 
                                        random(-initialMotion, initialMotion));
       
-      float red = constrain(red(baseColor) + random(-colorVariation, colorVariation), 0, 100);
-      float green = constrain(green(baseColor) + random(-colorVariation, colorVariation), 0, 100);
-      float blue = constrain(blue(baseColor) + random(-colorVariation, colorVariation), 0, 100);
+      float red = 0, green = 0, blue = 0;
+      while (red + blue + green < 0xA0) {
+        red = constrain(red(baseColor) + random(-colorVariation, colorVariation), 0, 100);
+        green = constrain(green(baseColor) + random(-colorVariation, colorVariation), 0, 100);
+        blue = constrain(blue(baseColor) + random(-colorVariation, colorVariation), 0, 100);
+      }
       
       //println("sub blob color = " + red + ", "+green+", "+blue);      
       
@@ -80,6 +90,41 @@ public class Blob
       blobColorMotion[i] = color(random(-initialColorMotion, initialColorMotion), 
                                  random(-initialColorMotion, initialColorMotion), 
                                  random(-initialColorMotion, initialColorMotion));    
+    }
+  }
+  
+  public void setLeftHandOut(boolean leftHandOut)
+  {
+    if (this.leftHandOut == false && leftHandOut == true) {
+      shootBlobby(true);
+    }
+    this.leftHandOut = leftHandOut;
+}
+  
+  public void setRightHandOut(boolean rightHandOut)
+  {
+    if (this.rightHandOut == false && rightHandOut == true) {
+      shootBlobby(false);
+    }
+    this.rightHandOut = rightHandOut;
+  }
+  
+  private void shootBlobby(boolean left)
+  {
+    float outerMost = -1;
+    color outerColor = #000000;
+    for (int i = 0; i < blobPoints.length; ++i) {
+      Point2D sub = blobPoints[i];
+      if (outerMost == -1 || (left && sub.x < outerMost) || (!left && sub.x > outerMost)) {
+        outerMost = sub.x;
+        outerColor = blobColors[i];
+      }
+    }
+    if (outerMost != -1) {
+      float blobbyDimming = 0.5;
+      color blobbyColor = color(blobbyDimming * red(outerColor), blobbyDimming * green(outerColor), blobbyDimming * blue(outerColor));
+      Blobby blobby = new Blobby(x + outerMost, blobbyColor, (left ? -2 : 2));
+      blobbies.add(blobby);
     }
   }
   
@@ -146,7 +191,16 @@ public class Blob
 //      println("c = " + red(c) + ", "+green(c)+", "+blue(c) + ", " + alpha);
 //      println("Filling ellipse at " + (x+sub.x) + ", " + (y+sub.y));
       ellipse(x + sub.x, y + sub.y, 6, 6);
-    }    
+    }
+    
+    for (int i = blobbies.size() - 1; i >= 0; --i) {
+      Blobby b = blobbies.get(i);
+      if (b.x < 0 || b.x > width) {
+        blobbies.remove(i);
+      }
+      b.update();
+      b.draw();
+    }
   }
   
   private void drift()

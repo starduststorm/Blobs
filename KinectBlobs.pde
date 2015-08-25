@@ -37,13 +37,13 @@ BlobManager blobManager;
 void setup() {
   size(240, 8, P3D);
   registry = new DeviceRegistry();
-  //registry.setLogging(false);
+  registry.setLogging(false);
   testObserver = new TestObserver();
   registry.addObserver(testObserver);
   frameRate(60);
   prepareExitHandler();
   
-  //blobManager = new BlobManager();
+  blobManager = new BlobManager();
 }
 
 //float mod_distance(float a, float b, float m)
