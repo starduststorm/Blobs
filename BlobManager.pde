@@ -13,6 +13,11 @@ public class BlobManager
     
   }
   
+  public boolean hasBlobs()
+  {
+    return blobs.size() > 0 || awolBlobs.size() > 0;
+  }
+  
   public void update()
   { 
     HashMap<String,TrackingTarget> targets = reader.trackedTargets();
@@ -90,7 +95,7 @@ public class BlobManager
       String awolID = (String)pair.getKey();
       //println("awol blob " + awolID + " last seen " + (millis() - awolBlob.lastSeen) + " millis ago");
       if (millis() - awolBlob.lastSeen > 3000) {
-        println("Expiring awol blob" + awolID);
+        println("Expiring awol blob " + awolID);
         it.remove();
       }
     }

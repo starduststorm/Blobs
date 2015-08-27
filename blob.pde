@@ -48,7 +48,11 @@ public class Blob
   
   private ArrayList<Blobby> blobbies;
   
+  int birthdate;
+  
   public Blob() {
+    birthdate = millis();
+    
     x = -1;
     y = height / 2;
     xVelocities = new LinkedList<Float>();
@@ -184,8 +188,11 @@ public class Blob
       
       color c = blobColors[i];
       
+      int age = millis() - birthdate;
+      float youngAlphaFactor = (age < 3000 ? (age / 3000.0) : 1);
+      
       float distance = subBlobDistance(i);
-      float alpha = 60 * (1 - distance / blobWidth);
+      float alpha = 60 * (1 - distance / blobWidth) * youngAlphaFactor;
       
       fill(red(c), green(c), blue(c), alpha);
 //      println("c = " + red(c) + ", "+green(c)+", "+blue(c) + ", " + alpha);
