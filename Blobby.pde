@@ -9,7 +9,7 @@ public class Blobby
   {
     println("Made blobby " + x + ", dx = " + dx);
     this.x = x;
-    this.y = height / 2 + random(-2, 2);
+    this.y = blobsRegionHeight / 2 + random(-2, 2);
     this.blobbyColor = c;
     this.dx = dx;
     this.initialX = x;
