@@ -1,149 +1,124 @@
+public class Point
+{
+  float x;
+  float y;
+  public Point(float x, float y)
+  {
+    this.x = x;
+    this.y = y;
+  }
+  public Point(int x, int y)
+  {
+    this.x = x;
+    this.y = y;
+  }
+}
+
 Blob blob = null;
+
+float kBlobCoastThreshold = 50;
+float kBlobDisappearThreshold = 200;
+float kBlobExpireThreshold = 3000;
+final float kBlobTrackTolerance = 10.0;
 
 public class BlobManager
 {
   KinectPV2 kinect;
-  HashMap<String, Blob> blobs;
-  HashMap<String,Blob> awolBlobs;
+  HashSet<Blob> blobs;
   
   public BlobManager(KinectPV2 kinect)
   {
     this.kinect = kinect;
-    blobs = new HashMap<String, Blob>();
-    awolBlobs = new HashMap<String,Blob>();
-    
+    blobs = new HashSet<Blob>();
   }
   
   public boolean hasBlobs()
   {
-    return blobs.size() > 0 || awolBlobs.size() > 0;
+    return blobs.size() > 0;
   }
   
-  public void update()
+  private Point coordsForJoint(KJoint joint)
   {
-    ArrayList<KSkeleton> skeletons = kinect.getSkeleton3d();
+    return new Point(joint.getX() / 512.0 * width, joint.getY() / 424 * height);
+  }
+  
+  private void _updateBlobs()
+  {
+        //ArrayList<KSkeleton> skeletons = kinect.getSkeleton3d();
+    ArrayList<KSkeleton> skeletons = kinect.getSkeletonDepthMap();
+
     if (skeletons.size() > 0) {
       println("Blob manager update. Have " + skeletons.size() + " skeletons");
       println("Skeleton 0 = " + skeletons.get(0));
     }
-    for (KSkeleton skeleton : skeletons) {
-     if (skeleton.isTracked()) {
-       KJoint[] joints = skeleton.getJoints();
-       KJoint head = joints[KinectPV2.JointType_Head];
+    
+    // We have no concept of "id" for KSkeleton, so we have to rely on rough position to track the same object
+    // from frame to frame. eww.
         
-        float x = head.getX();
+    HashSet<Blob> searchList = new HashSet<Blob>(blobs);
+    
+    int millis = millis();
+    
+    for (KSkeleton skeleton : skeletons) {
+      if (skeleton.isTracked()) {
+        KJoint[] joints = skeleton.getJoints();
+        KJoint head = joints[KinectPV2.JointType_Head];
+        Point p = coordsForJoint(head);
+        if (!Float.isFinite(p.x) || !Float.isFinite(p.y)) {
+          // Tends to happen as bodies move out of the frame?
+          continue;
+        }
+                
+        Blob blob = null;
+        // First search for this skeleton in the currently-tracked list
+        for (Iterator<Blob> it = searchList.iterator(); it.hasNext();) {
+          Blob considerBlob = it.next();
+          if (abs(p.x - (considerBlob.x + considerBlob.smoothedVelocity())) < kBlobTrackTolerance) {
+            blob = considerBlob;
+            it.remove(); // remove this from the search list so we don't find it twice
+            break;
+          }
+        }
         if (blob == null) {
+          println("Making new blob at " + p.x);
           blob = new Blob();
         }
-        blob.setX(x);
-        blob.draw();
-        println("Drawing blob at " + blob.getX());
+        blob.setX(p.x);
+        if (millis - blob.lastSeen > kBlobDisappearThreshold) {
+          // This blob had disappeared, so we should set the blob age to 0 so it fades back in.
+          blob.birthdate = millis;
+        }
+        blob.lastSeen = millis;
+        blobs.add(blob);
       }
-    }   
+    }
     
-    //HashMap<String,TrackingTarget> targets = reader.trackedTargets();
-    
-    //if (targets != null && targets.size() > 0) {
-    //  for (TrackingTarget tt : targets.values()) {
-    //    float targetPosition = tt.position * width;
-        
-    //    Blob blob = blobs.get(tt.id);
-    //    if (blob == null) {
-    //      blob = awolBlobs.get(tt.id);
-    //      if (blob != null) {
-    //        println("Found blob " + tt.id + " with original id");
-    //        blobs.put(tt.id, blob);
-    //        awolBlobs.remove(tt.id);
-    //        blob.awol = false;
-    //      }
-    //    }
-    //    if (blob == null) {
-    //      // The Kinect is not tracking this blob. But it may have disappeared for only a short time.
-    //      // Check for a blob in a very similar position in the recently-disappeared list.
-    //      Iterator it = awolBlobs.entrySet().iterator();
-    //      while (it.hasNext()) {
-    //        Map.Entry pair = (Map.Entry)it.next();
-    //        Blob awolBlob = (Blob)pair.getValue();
-    //        String awolID = (String)pair.getKey();
-    //        if (abs(awolBlob.x - targetPosition) < 10) {
-    //          println("Found blob " + awolID + ", assigning new ID " + tt.id);
-    //          blob = awolBlob;
-    //          blob.awol = false;
-    //          it.remove();
-    //          blobs.remove(awolID);
-    //          blobs.put(tt.id, blob);
-    //        }
-    //      }
-    //      if (blob == null) {
-    //        println("New blob " + tt.id + " at " + tt.position);
-    //        blob = new Blob();
-    //        blobs.put(tt.id, blob);
-    //      }
-    //    }
-    //    if (!tt.stale) {
-    //      blob.lastSeen = millis();
-    //      blob.awol = false;
-    //      blob.setX(targetPosition);
-          
-    //      blob.setLeftHandOut(tt.leftHandOut);
-    //      blob.setRightHandOut(tt.rightHandOut);
-    //    }
-    //  }
-    //}
-    
-    //// Mark any Blobs that are no longer tracked as awol
-    //// FIXME: Use iterator
-    //{
-    //  Iterator it = blobs.entrySet().iterator();
-    //  while (it.hasNext()) {
-    //   Map.Entry pair = (Map.Entry)it.next();
-    //   String id = (String)pair.getKey();
-    //   Blob blob = (Blob)pair.getValue();
-    //   if ((targets == null || !targets.containsKey(id)) && !blob.awol) {
-    //     println("Blob " + id + " is awol");
-    //     blob.awol = true;
-    //     it.remove();
-    //     awolBlobs.put(id, blob);
-    //   }
-    //  }
-    //}
-    
-    //// Remove blobs that have been awol too long
-    //Iterator it = awolBlobs.entrySet().iterator();
-    //while (it.hasNext()) {
-    //  Map.Entry pair = (Map.Entry)it.next();
-    //  Blob awolBlob = (Blob)pair.getValue();
-    //  String awolID = (String)pair.getKey();
-    //  //println("awol blob " + awolID + " last seen " + (millis() - awolBlob.lastSeen) + " millis ago");
-    //  if (millis() - awolBlob.lastSeen > 3000) {
-    //    println("Expiring awol blob " + awolID);
-    //    it.remove();
-    //  }
-    //}
-    
-    //// For any blobs that were not updated this frame, keep them going at present velocity
-    //for (String id : blobs.keySet()) {
-    //  boolean stale = false;
-    //  if (targets == null || !targets.containsKey(id)) {
-    //    stale = true;
-    //  } else {
-    //    TrackingTarget tt = targets.get(id);
-    //    stale = tt.stale;
-    //    tt.stale = true;
-    //  }
-    //  if (stale) {
-    //    Blob blob = blobs.get(id);
-    //    blob.coast();
-    //  }
-    //}
-    
-    //// Draw the tracked blobs!
-    //for (Blob blob : blobs.values()) {
-    //  //println("Drawing blob " + blob + " at " + blob.x);
-    //  //if (!blob.awol) {
-    //    blob.draw();
-    //  //}
-    //}
+    for (Iterator<Blob> it = blobs.iterator(); it.hasNext(); ) {
+      Blob blob = it.next();
+      int timeSince = millis - blob.lastSeen;
+      
+      // Coast blobs that weren't updated this frame
+      if (timeSince > 0 && timeSince < kBlobDisappearThreshold) {
+        blob.coast();
+      }
+      
+      // Remove blobs that are very awol
+      if (timeSince > kBlobExpireThreshold) {
+        println("Expiring awol blob " + blob);
+        it.remove();
+      }
+      
+      // Draw blobs that aren't too awol
+      if (timeSince < kBlobDisappearThreshold) {
+        println("Drawing blob " + blob + " at " + blob.x);
+        blob.draw();
+      }
+    }  
+  }
+  
+  public void update()
+  {
+    _updateBlobs();    
   }
   
   public void close()

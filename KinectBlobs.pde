@@ -30,7 +30,8 @@ PGraphics pg;
 
 void setup()
 {
-  size(1536, 440, P3D);
+  //size(1536, 440, P3D);
+  size(240, 8, P3D);
   frameRate(60);
   
   // Init pixelpusher
@@ -41,27 +42,27 @@ void setup()
  
  // Init Kinect
   kinect = new KinectPV2(this);   
-  kinect.enableDepthImg(true);   
-  //kinect.enableSkeletonDepthMap(true);
-  kinect.enableSkeleton3DMap(true);
+  //kinect.enableDepthImg(true);   
+  kinect.enableSkeletonDepthMap(true);
+  //kinect.enableSkeleton3DMap(true);
   kinect.enableBodyTrackImg(true);
-  kinect.enableInfraredImg(true);
+  //kinect.enableInfraredImg(true);
   kinect.init();
  
   prepareExitHandler();
   
   blobManager = new BlobManager(kinect);
   
-  pg = createGraphics(blobsRegionWidth, blobsRegionHeight);
+  //pg = createGraphics(blobsRegionWidth, blobsRegionHeight);
 }
 
 boolean first = true;
 
 int timeBlobsLastSeen = -1;
 int blobsXOffset = 0;
-int blobsYOffset = 430;
+int blobsYOffset = 0;//430;
 int blobsRegionHeight = 8;
-int blobsRegionWidth = 512;
+int blobsRegionWidth = 240;//512;
 
 void draw()
 {
@@ -77,27 +78,25 @@ void draw()
        first = false;
     }
     
-    blendMode(BLEND);
+    //blendMode(BLEND);
+    //colorMode(RGB, 100);
     
-    
-    
-    colorMode(RGB, 100);
-    fill(0);
-    stroke(0);
-    rect(0, 0, width, height - blobsRegionHeight);
+    //fill(0);
+    //stroke(0);
+    //rect(0, 0, width, height - blobsRegionHeight);
     
     //image(kinect.getDepthImage(), 0, 0);
     //image(kinect.getInfraredImage(), 512*2, 0);
+
+    //PImage bodyImage = kinect.getBodyTrackImage();
+    //bodyImage.filter(INVERT);
+    //bodyImage.filter(DILATE);
+    //image(bodyImage, 512, 0);
     
-    PImage bodyImage = kinect.getBodyTrackImage();
-    bodyImage.filter(INVERT);
-    bodyImage.filter(DILATE);
-    image(bodyImage, 512, 0);
-    fill(100, 0, 0);
-    stroke(100, 0, 0);
-    text(String.format("fps: %.1f", frameRate), 10, 15);
-    
-    blendMode(ADD);
+    //fill(100, 0, 0);
+    //stroke(100, 0, 0);
+    //text(String.format("fps: %.1f", frameRate), 10, 15);
+    //blendMode(ADD);
     
     //pg.beginDraw();
     //pg.background(0, 0, 0);
@@ -107,18 +106,15 @@ void draw()
     //image(bodyImage, 0, 0, blobsRegionWidth, blobsRegionHeight);
     //image(bodyImage, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
     //pg.endDraw();
-
-    
-
     //image(pg, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
        
     int numStrips = strips.size();
     if (numStrips == 0)
       return;
     
-    translate(0, blobsYOffset);
+    //translate(0, blobsYOffset);
     blobManager.update();
-    translate(0, -blobsYOffset);
+    //translate(0, -blobsYOffset);
     
     if (blobManager.hasBlobs()) {
         timeBlobsLastSeen = millis();
@@ -127,7 +123,7 @@ void draw()
     // Fade out the old blobs
     colorMode(RGB, 100);
     blendMode(SUBTRACT);
-    int fadeRate = 2;//(blobManager.hasBlobs() ? 2 : 20);
+    int fadeRate = (blobManager.hasBlobs() || (millis() - timeBlobsLastSeen < 2000) ? 2 : 20);
     fill(fadeRate, fadeRate, fadeRate, 100);
     rect(blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
     

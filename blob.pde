@@ -37,9 +37,7 @@ public class Blob
   private color[] blobColors;
   private Point2D[] blobPointMotion;
   
-  // TODO: These really don't belong to blob, they should be on tracking target.
   public int lastSeen;
-  public boolean awol;
   
   boolean leftHandOut;
   boolean rightHandOut;
@@ -68,7 +66,7 @@ public class Blob
 //           red(baseColor) + green(baseColor) + blue(baseColor) > 200) {
 //      baseColor = color(random(0, 100), random(0, 100), random(0, 100));
 //    }
-    println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
+    //println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
     
     for (int i = 0; i < blobPoints.length; ++i) {
       float ellipseX = random(-blobbiness, blobbiness);
@@ -141,18 +139,22 @@ public class Blob
     x = newX;
   }
   
-  public void coast()
-  {
-    float smoothedVelocity = 0;
+  public float smoothedVelocity()
+  {    float smoothedVelocity = 0;
     if (xVelocities.size() > 0) {
       for (Float f : xVelocities) {
         smoothedVelocity += f;
       }
       smoothedVelocity /= xVelocities.size();
     }
+    return smoothedVelocity;
+  }
+  
+  public void coast()
+  {
     //println("Coasting blob " + this + " at " + smoothedVelocity);
     //setX(x + smoothedVelocity);
-    x += smoothedVelocity;
+    x += this.smoothedVelocity();
   }
   
   private float subBlobDistance(int i)
@@ -177,7 +179,7 @@ public class Blob
       float youngAlphaFactor = (age < 3000 ? (age / 3000.0) : 1);
       
       float distance = subBlobDistance(i);
-      float alpha = 100;//60 * (1 - distance / blobWidth) * youngAlphaFactor;
+      float alpha = 60 * (1 - distance / blobWidth) * youngAlphaFactor;
       
       fill(red(c), green(c), blue(c), alpha);
      //println("c = " + red(c) + ", "+green(c)+", "+blue(c) + ", " + alpha);
