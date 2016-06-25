@@ -8,9 +8,14 @@ import java.util.*;
 
 import KinectPV2.*;
 
-KinectPV2 kinect;
+boolean visualDebug = false;
+//PGraphics pg;
 
 DeviceRegistry registry;
+TestObserver testObserver;
+
+KinectPV2 kinect;
+BlobManager blobManager;
 
 class TestObserver implements Observer {
   public boolean hasStrips = false;
@@ -22,11 +27,6 @@ class TestObserver implements Observer {
     this.hasStrips = true;
   }
 }
-
-TestObserver testObserver;
-BlobManager blobManager;
-  
-PGraphics pg;
 
 void setup()
 {
@@ -143,6 +143,11 @@ void draw()
      stripy++;
     }
   }
+}
+
+public PVector coordsForJoint(KJoint joint)
+{
+  return new PVector(joint.getX() / 512.0 * width, joint.getY() / 424 * height);
 }
 
 private void prepareExitHandler () {

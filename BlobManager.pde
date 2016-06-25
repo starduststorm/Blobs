@@ -1,18 +1,3 @@
-public class Point
-{
-  float x;
-  float y;
-  public Point(float x, float y)
-  {
-    this.x = x;
-    this.y = y;
-  }
-  public Point(int x, int y)
-  {
-    this.x = x;
-    this.y = y;
-  }
-}
 
 Blob blob = null;
 
@@ -36,21 +21,10 @@ public class BlobManager
   {
     return blobs.size() > 0;
   }
-  
-  private Point coordsForJoint(KJoint joint)
-  {
-    return new Point(joint.getX() / 512.0 * width, joint.getY() / 424 * height);
-  }
-  
+    
   private void _updateBlobs()
   {
-        //ArrayList<KSkeleton> skeletons = kinect.getSkeleton3d();
     ArrayList<KSkeleton> skeletons = kinect.getSkeletonDepthMap();
-
-    if (skeletons.size() > 0) {
-      println("Blob manager update. Have " + skeletons.size() + " skeletons");
-      println("Skeleton 0 = " + skeletons.get(0));
-    }
     
     // We have no concept of "id" for KSkeleton, so we have to rely on rough position to track the same object
     // from frame to frame. eww.
@@ -63,7 +37,7 @@ public class BlobManager
       if (skeleton.isTracked()) {
         KJoint[] joints = skeleton.getJoints();
         KJoint head = joints[KinectPV2.JointType_Head];
-        Point p = coordsForJoint(head);
+        PVector p = coordsForJoint(head);
         if (!Float.isFinite(p.x) || !Float.isFinite(p.y)) {
           // Tends to happen as bodies move out of the frame?
           continue;
@@ -82,6 +56,7 @@ public class BlobManager
         if (blob == null) {
           println("Making new blob at " + p.x);
           blob = new Blob();
+          blobs.add(blob);
         }
         blob.setX(p.x);
         if (millis - blob.lastSeen > kBlobDisappearThreshold) {
@@ -89,7 +64,7 @@ public class BlobManager
           blob.birthdate = millis;
         }
         blob.lastSeen = millis;
-        blobs.add(blob);
+        blob.updateWithSkeleton(skeleton);
       }
     }
     
@@ -110,7 +85,7 @@ public class BlobManager
       
       // Draw blobs that aren't too awol
       if (timeSince < kBlobDisappearThreshold) {
-        println("Drawing blob " + blob + " at " + blob.x);
+        //println("Drawing blob " + blob + " at " + blob.x);
         blob.draw();
       }
     }  

@@ -5,11 +5,11 @@ public class Blobby
   float dx;
   float initialX;
   
-  public Blobby(float x, color c, float dx)
+  public Blobby(PVector p, color c, float dx)
   {
-    println("Made blobby " + x + ", dx = " + dx);
-    this.x = x;
-    this.y = blobsRegionHeight / 2 + random(-2, 2);
+    println("Made blobby " + p + ", dx = " + dx);
+    this.x = p.x;
+    this.y = p.y;
     this.blobbyColor = c;
     this.dx = dx;
     this.initialX = x;

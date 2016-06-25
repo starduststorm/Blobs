@@ -8,16 +8,6 @@ final color[] kGoodBaseColors = {
    #E00000, #00E000, #0000E0, #E0E000, #E000E0, #00E0E0, #E0E0E0,  
 };
 
-private class Point2D
-{
-  public float x;
-  public float y;
-  public Point2D(float x, float y) {
-    this.x = x;
-    this.y = y;
-  }
-}
-
 final int kSmoothingFactor = 10;
 
 final float colorVariation = 40;
@@ -33,9 +23,9 @@ public class Blob
   
   private color baseColor;
   
-  private Point2D[] blobPoints;  // offsets
+  private PVector[] blobPVectors;  // offsets
   private color[] blobColors;
-  private Point2D[] blobPointMotion;
+  private PVector[] blobPVectorMotion;
   
   public int lastSeen;
   
@@ -54,8 +44,8 @@ public class Blob
     xVelocities = new LinkedList<Float>();
     
     int subBlobs = (int)random(7, 40);
-    blobPoints = new Point2D[subBlobs];
-    blobPointMotion = new Point2D[subBlobs];
+    blobPVectors = new PVector[subBlobs];
+    blobPVectorMotion = new PVector[subBlobs];
     blobColors = new color[subBlobs];
     //blobColorMotion = new color[subBlobs];
     
@@ -68,13 +58,13 @@ public class Blob
 //    }
     //println("baseColor = " + red(baseColor) + ", "+green(baseColor)+", "+blue(baseColor));
     
-    for (int i = 0; i < blobPoints.length; ++i) {
+    for (int i = 0; i < blobPVectors.length; ++i) {
       float ellipseX = random(-blobbiness, blobbiness);
 //      println("ellipseX = " + ellipseX);
       float ellipseY = random(-blobbiness / 4, blobbiness / 4);
       
-      blobPoints[i] = new Point2D(ellipseX, ellipseY);
-      blobPointMotion[i] = new Point2D(random(-initialMotion, initialMotion), 
+      blobPVectors[i] = new PVector(ellipseX, ellipseY);
+      blobPVectorMotion[i] = new PVector(random(-initialMotion, initialMotion), 
                                        random(-initialMotion, initialMotion));
       
       float red = 0, green = 0, blue = 0;
@@ -88,29 +78,91 @@ public class Blob
     }
   }
   
-  public void setLeftHandOut(boolean leftHandOut)
+  public float _tweakY(float y)
   {
-    if (this.leftHandOut == false && leftHandOut == true) {
-      shootBlobby(true);
-    }
-    this.leftHandOut = leftHandOut;
-}
-  
-  public void setRightHandOut(boolean rightHandOut)
-  {
-    if (this.rightHandOut == false && rightHandOut == true) {
-      shootBlobby(false);
-    }
-    this.rightHandOut = rightHandOut;
+    // It's kind hard to reach the top and bottom of the frame, so magnify it a bit. 
+    return (y - height / 2.0) * 1.5 + height / 2.0 + 1;
   }
   
-  private void shootBlobby(boolean left)
+  public void updateWithSkeleton(KSkeleton skeleton)
+  {
+    KJoint[] joints = skeleton.getJoints();
+    //KJoint neck = joints[KinectPV2.JointType_SpineShoulder];
+    KJoint leftShoulder = joints[KinectPV2.JointType_ShoulderLeft];
+    KJoint rightShoulder = joints[KinectPV2.JointType_ShoulderRight];
+    //if (neck.isTracked()) {
+    KJoint leftHand = joints[KinectPV2.JointType_HandLeft];
+    KJoint rightHand = joints[KinectPV2.JointType_HandRight];
+    
+    //final float kHandThreshold = 20;
+    //final float kPixelPointTweak = 1.0;
+    
+    //PVector neckPx = coordsForJoint(neck);
+    PVector leftShoulderPx = coordsForJoint(leftShoulder);
+    PVector rightShoulderPx = coordsForJoint(rightShoulder);
+    PVector rightHandPx = coordsForJoint(rightHand);
+    PVector leftHandPx = coordsForJoint(leftHand);
+    
+    println("rightHandPx = " + rightHandPx);
+    println("leftHandPx = " + leftHandPx);
+    
+    rightHandPx.y = this._tweakY(rightHandPx.y);
+    leftHandPx.y = this._tweakY(leftHandPx.y);
+    
+    //float leftHandDistance = (leftShoulderPx.x - leftHandPx.x);
+    //float rightHandDistance = -(rightShoulderPx.x - rightHandPx.x);
+    
+    PVector leftShoulderPt = new PVector(leftShoulder.getX(), leftShoulder.getY(), leftShoulder.getZ());
+    PVector rightShoulderPt = new PVector(rightShoulder.getX(), rightShoulder.getY(), rightShoulder.getZ());
+    PVector rightHandPt = new PVector(rightHand.getX(), rightHand.getY(), rightHand.getZ());
+    PVector leftHandPt = new PVector(leftHand.getX(), leftHand.getY(), leftHand.getZ());
+    
+    final float kHandThreshold = 50;
+    final float kPixelPointTweak = 4.0;
+    float leftHandDistance = leftShoulderPt.dist(leftHandPt);
+    float rightHandDistance = rightShoulderPt.dist(rightHandPt);
+    //println("leftHandDistance = " + leftHandDistance);
+    //println("rightHandDistance = " + rightHandDistance);
+
+    // 
+    
+    boolean leftHandOut = leftHandDistance > kHandThreshold;
+    if (this.leftHandOut == false && leftHandOut == true) {
+      shootBlobby(leftHandPx.y, -2.0);
+    }
+    this.leftHandOut = leftHandOut;
+    
+    boolean rightHandOut = rightHandDistance > kHandThreshold;
+    if (this.rightHandOut == false && rightHandOut == true) {
+      shootBlobby(rightHandPx.y, 2.0);
+    }
+    this.rightHandOut = rightHandOut;
+    
+    
+    if (visualDebug) {
+      blendMode(BLEND);
+      colorMode(RGB, 100);
+      stroke(#FF0000);
+      //noFill(); // fill the threshold ellipse, since it suppresses the blob from being all fadey
+      //ellipse(neckPx.x, neckPx.y, kHandThreshold / kPixelPointTweak * 2.0, kHandThreshold / kPixelPointTweak * 2.0);
+      float leftLineX = leftShoulderPx.x - kHandThreshold / kPixelPointTweak;
+      line(leftLineX, 0, leftLineX, height);
+      float rightLineX = rightShoulderPx.x + kHandThreshold / kPixelPointTweak;
+      line(rightLineX, 0, rightLineX, height);
+      noStroke();
+      fill(#00FF00);
+      ellipse(leftShoulderPx.x - leftHandDistance / kPixelPointTweak, leftHandPx.y, 2, 2);
+      ellipse(rightShoulderPx.x + rightHandDistance / kPixelPointTweak, rightHandPx.y, 2, 2);
+    }
+  }
+  
+  private void shootBlobby(float y, float initialdx)
   {
     float outerMost = -1;
     color outerColor = #000000;
-    for (int i = 0; i < blobPoints.length; ++i) {
-      Point2D sub = blobPoints[i];
-      if (outerMost == -1 || (left && sub.x < outerMost) || (!left && sub.x > outerMost)) {
+    for (int i = 0; i < blobPVectors.length; ++i) {
+      PVector sub = blobPVectors[i];
+      if (outerMost == -1 || (initialdx < 0 && sub.x < outerMost) || (initialdx > 0 && sub.x > outerMost)) {
         outerMost = sub.x;
         outerColor = blobColors[i];
       }
@@ -118,7 +170,10 @@ public class Blob
     if (outerMost != -1) {
       float blobbyDimming = 0.5;
       color blobbyColor = color(blobbyDimming * red(outerColor), blobbyDimming * green(outerColor), blobbyDimming * blue(outerColor));
-      Blobby blobby = new Blobby(x + outerMost, blobbyColor, (left ? -2 : 2));
+      
+      PVector startPVector = new PVector(x + outerMost, this._tweakY(y));
+      
+      Blobby blobby = new Blobby(startPVector, blobbyColor, initialdx);
       blobbies.add(blobby);
     }
   }
@@ -159,7 +214,7 @@ public class Blob
   
   private float subBlobDistance(int i)
   {
-    Point2D sub = blobPoints[i];
+    PVector sub = blobPVectors[i];
     return sqrt((sub.x * sub.x + sub.y * sub.y));
   }
   
@@ -170,8 +225,8 @@ public class Blob
     blendMode(BLEND);
     colorMode(RGB, 100);
     noStroke();
-    for (int i = 0; i < blobPoints.length; ++i) {
-      Point2D sub = blobPoints[i];
+    for (int i = 0; i < blobPVectors.length; ++i) {
+      PVector sub = blobPVectors[i];
       
       color c = blobColors[i];
       
@@ -200,16 +255,16 @@ public class Blob
   private void drift()
   {
     // Shift the subblobs around to make the colors move
-    for (int i = 0; i < blobPoints.length; ++i) {
+    for (int i = 0; i < blobPVectors.length; ++i) {
       // Drift position of sub blobs
       {
-        //Point2D sub = blobPoints[i];
+        //PVector sub = blobPVectors[i];
         float distance = subBlobDistance(i);
         // pull towards center proportional to distance so sub blobs don't escape
-        blobPointMotion[i].x += -blobPoints[i].x * distance * 0.0001;
-        blobPointMotion[i].y += -blobPoints[i].y * distance * 0.0001;
-        blobPoints[i].x += blobPointMotion[i].x;
-        blobPoints[i].y += blobPointMotion[i].y;
+        blobPVectorMotion[i].x += -blobPVectors[i].x * distance * 0.0001;
+        blobPVectorMotion[i].y += -blobPVectors[i].y * distance * 0.0001;
+        blobPVectors[i].x += blobPVectorMotion[i].x;
+        blobPVectors[i].y += blobPVectorMotion[i].y;
       }
     }
   }
