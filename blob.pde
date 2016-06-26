@@ -15,7 +15,7 @@ final float blobWidth = 12;
 final float blobbiness = 14;
 final float initialMotion = 0.03;
 
-public class Blob
+public class Blob implements GestureDelegate
 {
   private float x;
   private LinkedList<Float> xVelocities;
@@ -36,7 +36,11 @@ public class Blob
   
   int birthdate;
   
-  public Blob() {
+  GestureRecognizer gestureRecognizer; 
+  boolean visualDebug;
+  
+  public Blob()
+  {
     birthdate = millis();
     
     x = -1;
@@ -76,6 +80,8 @@ public class Blob
             
       blobColors[i] = color(red, green, blue);
     }
+    
+    gestureRecognizer = new GestureRecognizer(this);
   }
   
   public float _tweakY(float y)
@@ -86,6 +92,8 @@ public class Blob
   
   public void updateWithSkeleton(KSkeleton skeleton)
   {
+    gestureRecognizer.updateWithSkeleton(skeleton);
+    
     KJoint[] joints = skeleton.getJoints();
     //KJoint neck = joints[KinectPV2.JointType_SpineShoulder];
     KJoint leftShoulder = joints[KinectPV2.JointType_ShoulderLeft];
@@ -102,9 +110,6 @@ public class Blob
     PVector rightShoulderPx = coordsForJoint(rightShoulder);
     PVector rightHandPx = coordsForJoint(rightHand);
     PVector leftHandPx = coordsForJoint(leftHand);
-    
-    println("rightHandPx = " + rightHandPx);
-    println("leftHandPx = " + leftHandPx);
     
     rightHandPx.y = this._tweakY(rightHandPx.y);
     leftHandPx.y = this._tweakY(leftHandPx.y);
@@ -125,18 +130,19 @@ public class Blob
     //println("rightHandDistance = " + rightHandDistance);
 
     // 
+    // FIXME: also don't shoot blobbies if your hands are just resting at your sides. Maybe look at hip distance too?
     
     boolean leftHandOut = leftHandDistance > kHandThreshold;
     if (this.leftHandOut == false && leftHandOut == true) {
       shootBlobby(leftHandPx.y, -2.0);
     }
-    this.leftHandOut = leftHandOut;
+    //this.leftHandOut = leftHandOut;
     
     boolean rightHandOut = rightHandDistance > kHandThreshold;
     if (this.rightHandOut == false && rightHandOut == true) {
       shootBlobby(rightHandPx.y, 2.0);
     }
-    this.rightHandOut = rightHandOut;
+    //this.rightHandOut = rightHandOut;
     
     
     if (visualDebug) {
@@ -149,6 +155,7 @@ public class Blob
       line(leftLineX, 0, leftLineX, height);
       float rightLineX = rightShoulderPx.x + kHandThreshold / kPixelPointTweak;
       line(rightLineX, 0, rightLineX, height);
+      //rect(leftLineX, -1, rightLineX, height + 1);
       noStroke();
       fill(#00FF00);
       ellipse(leftShoulderPx.x - leftHandDistance / kPixelPointTweak, leftHandPx.y, 2, 2);
@@ -267,5 +274,12 @@ public class Blob
         blobPVectors[i].y += blobPVectorMotion[i].y;
       }
     }
+  }
+  
+  // Gestures
+  
+  public void setVisualDebug(boolean visualDebug)
+  {
+    this.visualDebug = visualDebug;
   }
 }

@@ -8,7 +8,6 @@ import java.util.*;
 
 import KinectPV2.*;
 
-boolean visualDebug = false;
 //PGraphics pg;
 
 DeviceRegistry registry;
@@ -115,7 +114,7 @@ void draw()
     //translate(0, blobsYOffset);
     blobManager.update();
     //translate(0, -blobsYOffset);
-    
+        
     if (blobManager.hasBlobs()) {
         timeBlobsLastSeen = millis();
     }
