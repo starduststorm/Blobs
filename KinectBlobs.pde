@@ -53,6 +53,7 @@ void setup()
   blobManager = new BlobManager(kinect);
   
   //pg = createGraphics(blobsRegionWidth, blobsRegionHeight);
+  textSize(8);
 }
 
 boolean first = true;
@@ -125,6 +126,16 @@ void draw()
     int fadeRate = (blobManager.hasBlobs() || (millis() - timeBlobsLastSeen < 2000) ? 2 : 20);
     fill(fadeRate, fadeRate, fadeRate, 100);
     rect(blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
+    
+    // Visual debug
+    if (blobManager.anyVisualDebug()) {
+      blendMode(BLEND);
+      noStroke();
+      fill(#000000);
+      rect(0, 0, 22, height);
+      fill(#FFFFFF);
+      text(String.format("%.1f", frameRate), 2, height / 2 + 1);
+    }
     
     // Render the scene
     int x=0;

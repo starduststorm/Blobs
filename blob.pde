@@ -38,6 +38,7 @@ public class Blob implements GestureDelegate
   
   GestureRecognizer gestureRecognizer; 
   boolean visualDebug;
+  boolean superBlobbies;
   
   public Blob()
   {
@@ -133,16 +134,16 @@ public class Blob implements GestureDelegate
     // FIXME: also don't shoot blobbies if your hands are just resting at your sides. Maybe look at hip distance too?
     
     boolean leftHandOut = leftHandDistance > kHandThreshold;
-    if (this.leftHandOut == false && leftHandOut == true) {
+    if ((this.superBlobbies || this.leftHandOut == false) && leftHandOut == true) {
       shootBlobby(leftHandPx.y, -2.0);
     }
-    //this.leftHandOut = leftHandOut;
+    this.leftHandOut = leftHandOut;
     
     boolean rightHandOut = rightHandDistance > kHandThreshold;
-    if (this.rightHandOut == false && rightHandOut == true) {
+    if ((this.superBlobbies || this.rightHandOut == false) && rightHandOut == true) {
       shootBlobby(rightHandPx.y, 2.0);
     }
-    //this.rightHandOut = rightHandOut;
+    this.rightHandOut = rightHandOut;
     
     
     if (visualDebug) {
@@ -281,5 +282,10 @@ public class Blob implements GestureDelegate
   public void setVisualDebug(boolean visualDebug)
   {
     this.visualDebug = visualDebug;
+  }
+  
+  public void setSuperBlobbies(boolean superBlobbies)
+  {
+    this.superBlobbies = superBlobbies;
   }
 }

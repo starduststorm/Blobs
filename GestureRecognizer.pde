@@ -2,6 +2,7 @@
 public interface GestureDelegate
 {
   void setVisualDebug(boolean visualDebug);
+  void setSuperBlobbies(boolean superBlobbies);
 }
 
 public class GestureRecognizer
@@ -40,6 +41,7 @@ public class GestureRecognizer
       this.leftHandState = leftHand.getState();
       leftHandPath.clear();
       leftHandStart = leftHandPosition;
+      println("Left hand state + " + this.leftHandState + " start at " + this.leftHandStart);
     }
     leftHandPath.addLast(leftHandPosition);
     if (leftHandPath.size() > 100) {
@@ -52,6 +54,7 @@ public class GestureRecognizer
       this.rightHandState = rightHand.getState();
       rightHandPath.clear();
       rightHandStart = rightHandPosition;
+      println("Right hand state + " + this.rightHandState + " start at " + this.rightHandStart);
     }
     rightHandPath.addLast(rightHandPosition);
     if (rightHandPath.size() > 100) {
@@ -59,6 +62,7 @@ public class GestureRecognizer
     }
     
     this.checkDebugGesture();
+    this.checkSuperBlobbiesGesture();
   }
   
   private void checkDebugGesture()
@@ -77,6 +81,21 @@ public class GestureRecognizer
             && rightHandPosition.x < rightHandStart.x - 20) {
           delegate.setVisualDebug(false);
         }
+      }
+    }
+  }
+  
+  private void checkSuperBlobbiesGesture()
+  {
+    if (this.leftHandState == KinectPV2.HandState_Open && this.rightHandState == KinectPV2.HandState_Open) {
+      PVector leftHandPosition = leftHandPath.getLast();
+      float leftMovedDistance = leftHandStart.dist(leftHandPosition);
+      PVector rightHandPosition = rightHandPath.getLast();
+      float rightMovedDistance = rightHandStart.dist(rightHandPosition);
+      
+      if (leftHandPosition.y < leftHandStart.y - 30 
+          && rightHandPosition.y < rightHandStart.y - 30) {
+        delegate.setSuperBlobbies(true);
       }
     }
   }

@@ -21,6 +21,16 @@ public class BlobManager
   {
     return blobs.size() > 0;
   }
+  
+  public boolean anyVisualDebug()
+  {
+    for (Blob blob : blobs) {
+      if (blob.visualDebug) {
+        return true;
+      }
+    }
+    return false;
+  }
     
   private void _updateBlobs()
   {
@@ -88,7 +98,14 @@ public class BlobManager
         //println("Drawing blob " + blob + " at " + blob.x);
         blob.draw();
       }
-    }  
+    }
+    
+    // Only allow super blobbies when there's only one person
+    if (skeletons.size() > 1) {
+      for (Blob blob : blobs) {
+        blob.superBlobbies = false;
+      }
+    }
   }
   
   public void update()

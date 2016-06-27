@@ -7,7 +7,7 @@ public class Blobby
   
   public Blobby(PVector p, color c, float dx)
   {
-    println("Made blobby " + p + ", dx = " + dx);
+    //println("Made blobby " + p + ", dx = " + dx);
     this.x = p.x;
     this.y = p.y;
     this.blobbyColor = c;
