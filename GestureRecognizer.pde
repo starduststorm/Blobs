@@ -41,7 +41,6 @@ public class GestureRecognizer
       this.leftHandState = leftHand.getState();
       leftHandPath.clear();
       leftHandStart = leftHandPosition;
-      println("Left hand state + " + this.leftHandState + " start at " + this.leftHandStart);
     }
     leftHandPath.addLast(leftHandPosition);
     if (leftHandPath.size() > 100) {
@@ -54,7 +53,6 @@ public class GestureRecognizer
       this.rightHandState = rightHand.getState();
       rightHandPath.clear();
       rightHandStart = rightHandPosition;
-      println("Right hand state + " + this.rightHandState + " start at " + this.rightHandStart);
     }
     rightHandPath.addLast(rightHandPosition);
     if (rightHandPath.size() > 100) {
@@ -89,9 +87,7 @@ public class GestureRecognizer
   {
     if (this.leftHandState == KinectPV2.HandState_Open && this.rightHandState == KinectPV2.HandState_Open) {
       PVector leftHandPosition = leftHandPath.getLast();
-      float leftMovedDistance = leftHandStart.dist(leftHandPosition);
       PVector rightHandPosition = rightHandPath.getLast();
-      float rightMovedDistance = rightHandStart.dist(rightHandPosition);
       
       if (leftHandPosition.y < leftHandStart.y - 30 
           && rightHandPosition.y < rightHandStart.y - 30) {
