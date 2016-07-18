@@ -8,6 +8,10 @@ import java.util.*;
 
 import KinectPV2.*;
 
+import ddf.minim.*;
+Minim minim;
+AudioInput in;
+
 //PGraphics pg;
 
 DeviceRegistry registry;
@@ -125,6 +129,7 @@ void draw()
     blendMode(SUBTRACT);
     int fadeRate = (blobManager.hasBlobs() || (millis() - timeBlobsLastSeen < 2000) ? 2 : 20);
     fill(fadeRate, fadeRate, fadeRate, 100);
+    noStroke();
     rect(blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
     
     // Visual debug

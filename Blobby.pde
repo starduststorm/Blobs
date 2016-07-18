@@ -1,34 +1,75 @@
+public enum BlobbyType {
+  Blobby, Liney, Splody,
+};
+
 public class Blobby
 {
   color blobbyColor;
-  float x, y;
-  float dx;
-  float initialX;
+  PVector position;
+  PVector velocity;
+  BlobbyType type;
   
-  public Blobby(PVector p, color c, float dx)
+  public Blobby(PVector start, PVector velocity, color c, BlobbyType type)
   {
     //println("Made blobby " + p + ", dx = " + dx);
-    this.x = p.x;
-    this.y = p.y;
+    this.position = start;
     this.blobbyColor = c;
-    this.dx = dx;
-    this.initialX = x;
+    this.velocity = velocity;
+    this.type = type;
   }
   
   public void update()
   {
-    this.x += this.dx;
+    this.position.add(this.velocity);
+    if (this.type == BlobbyType.Splody) {
+      // fall
+      this.velocity.y += 0.05;
+    }
+  }
+  
+  public boolean isDead()
+  {
+    switch (type) {
+      case Liney:
+      case Splody:
+        return this.position.y > blobsRegionHeight + 1;
+      case Blobby:
+      default:
+        return this.position.x < 0 || this.position.x > blobsRegionWidth;
+    }
   }
   
   public void draw()
   {
     blendMode(BLEND);
     colorMode(RGB, 100);
-    noStroke();
-    
     color c = this.blobbyColor;
-    fill(red(c), green(c), blue(c), 60);
-    float radius = 3;
-    ellipse(x, y, radius, radius);
+    
+    switch (type) {
+      case Liney: {
+        stroke(red(c), green(c), blue(c), 60);
+        noFill();
+        float x = round(this.position.x) + 0.5; 
+        this.position.y = sin(this.position.x / 12.0) * blobsRegionHeight / 2.0 + blobsRegionHeight / 2.0;
+        line(x, this.position.y, x, blobsRegionHeight + 1);
+        break;
+      }
+      
+      case Splody: {
+        fill(red(c), green(c), blue(c), 50);
+        final float radius = 2;
+        ellipse(this.position.x, this.position.y, radius, radius);
+        break;
+      }
+      
+      case Blobby: {
+        noStroke();
+        fill(red(c), green(c), blue(c), 60);
+        final float radius = 3;
+        ellipse(this.position.x, this.position.y, radius, radius);
+        break;
+      }
+      default: break;
+    }
   }
 }

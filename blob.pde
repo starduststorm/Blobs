@@ -32,6 +32,9 @@ public class Blob implements GestureDelegate
   boolean leftHandOut;
   boolean rightHandOut;
   
+  boolean leftFootOut;
+  boolean rightFootOut;
+
   private ArrayList<Blobby> blobbies;
   
   int birthdate;
@@ -145,36 +148,68 @@ public class Blob implements GestureDelegate
     }
     this.rightHandOut = rightHandOut;
     
+    KJoint spineBase = joints[KinectPV2.JointType_SpineBase];
+    PVector spineBasePx = coordsForJoint(spineBase);
+    
+    PVector leftFootPx = coordsForJoint(joints[KinectPV2.JointType_FootLeft]);
+    PVector rightFootPx = coordsForJoint(joints[KinectPV2.JointType_FootRight]);
+    PVector leftKneePx = coordsForJoint(joints[KinectPV2.JointType_KneeLeft]);
+    PVector rightKneePx = coordsForJoint(joints[KinectPV2.JointType_KneeRight]);
+    
+    final float footWaveThreshold = 21.0;
+    
+    float leftFootXDistance = spineBasePx.x - leftFootPx.x;
+    boolean leftFootOut = (leftFootXDistance > footWaveThreshold + (this.leftFootOut ? -2.0 : 0.0));
+    if (this.leftFootOut == false && leftFootOut == true) {
+      shootSplody(-2.0);
+    }
+    this.leftFootOut = leftFootOut;
+
+    float rightFootXDistance = rightFootPx.x - spineBasePx.x; 
+    boolean rightFootOut = (rightFootXDistance > footWaveThreshold + (this.rightFootOut ? -2.0 : 0.0));
+    if (this.rightFootOut == false && rightFootOut == true) {
+      shootSplody(2.0);
+    }
+    this.rightFootOut = rightFootOut;
+    
+    
     
     if (visualDebug) {
       blendMode(BLEND);
       colorMode(RGB, 100);
-      fill(#000000); // fill the threshold ellipse, since it suppresses the blob from being all fadey
-      stroke(#FF0000);
-      //ellipse(neckPx.x, neckPx.y, kHandThreshold / kPixelPointTweak * 2.0, kHandThreshold / kPixelPointTweak * 2.0);
+      
+      color handsColor = #00FF00;
+      
+      // Draw a hand blobby bounds display
+      noFill();
+      stroke(handsColor);
       float leftLineX = leftShoulderPx.x - kHandShoulderThreshold / kPixelPointTweak;
       float rightLineX = rightShoulderPx.x + kHandShoulderThreshold / kPixelPointTweak;
-      rect(leftLineX, -1, rightLineX - leftLineX, height + 1);
+      rect(leftLineX, -1, rightLineX - leftLineX, blobsRegionHeight + 2);
+      
       noStroke();
-      fill(#00FF00);
+      fill(handsColor);
       
       // Draw the positions of the hands, regarding the blobby thresholds
       ellipse(leftShoulderPx.x - leftHandDistance / kPixelPointTweak, leftHandPx.y, 2, 2);
       ellipse(rightShoulderPx.x + rightHandDistance / kPixelPointTweak, rightHandPx.y, 2, 2);
       
+      color footsColor = #0000FF;
+      
+      // Draw a foot blobby bounds display
+      stroke(footsColor);
+      noFill();
+      rect(spineBasePx.x - footWaveThreshold, -1, 2 * footWaveThreshold, blobsRegionHeight + 2);
+      
       // Draw the positions of the feet
-      PVector leftFootPx = coordsForJoint(joints[KinectPV2.JointType_FootLeft]);
-      PVector rightFootPx = coordsForJoint(joints[KinectPV2.JointType_FootRight]);
-      fill(#0000FF);
+      noStroke();
+      fill(footsColor);
       ellipse(leftFootPx.x, leftFootPx.y, 2, 2);
       ellipse(rightFootPx.x, rightFootPx.y, 2, 2);
       
       // Draw lines for expected heights of head and spinebase
       KJoint head = joints[KinectPV2.JointType_Head];
       PVector headPx = coordsForJoint(head);
-      
-      KJoint spineBase = joints[KinectPV2.JointType_SpineBase];
-      PVector spineBasePx = coordsForJoint(spineBase);
       
       final float kGraceThreshold = 0.4;
       final float kIdealSpineBase = 5.4;
@@ -210,25 +245,56 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     }
   }
   
-  private void shootBlobby(float y, float initialdx)
+  private int _indexOfOutermostSubBlob(boolean left)
   {
+    int index = -1;
     float outerMost = -1;
-    color outerColor = #000000;
     for (int i = 0; i < blobPVectors.length; ++i) {
       PVector sub = blobPVectors[i];
-      if (outerMost == -1 || (initialdx < 0 && sub.x < outerMost) || (initialdx > 0 && sub.x > outerMost)) {
+      if (index == -1 || (left && sub.x < outerMost) || (!left && sub.x > outerMost)) {
         outerMost = sub.x;
-        outerColor = blobColors[i];
+        index = i;
       }
     }
-    if (outerMost != -1) {
+    return index;
+  }
+  
+  private void _shootBlobbyLike(float y, float initialdx, BlobbyType blobbyType)
+  {
+    int index = _indexOfOutermostSubBlob(initialdx < 0);
+    if (index != -1) {
+      color outerColor = blobColors[index];
       float blobbyDimming = 0.5;
       color blobbyColor = color(blobbyDimming * red(outerColor), blobbyDimming * green(outerColor), blobbyDimming * blue(outerColor));
       
-      PVector startPVector = new PVector(x + outerMost, this._tweakY(y));
+      PVector startPVector = new PVector(x + blobPVectors[index].x, this._tweakY(y));
       
-      Blobby blobby = new Blobby(startPVector, blobbyColor, initialdx);
+      Blobby blobby = new Blobby(startPVector, new PVector(initialdx, 0.0), blobbyColor, blobbyType);
       blobbies.add(blobby);
+    }
+  }
+  
+  private void shootBlobby(float y, float initialdx)
+  {
+    _shootBlobbyLike(y, initialdx, BlobbyType.Blobby);
+  }
+  
+  private void shootLiney(float y, float initialdx)
+  {
+    _shootBlobbyLike(y, initialdx, BlobbyType.Liney);
+  }
+  
+  private void shootSplody(float initialdx)
+  {
+    int index = _indexOfOutermostSubBlob(initialdx < 0);
+    if (index != -1) {
+      for (int i = 0; i < 20; ++i) {
+        color blobbyColor = blobColors[(int)random(0, (int)blobColors.length)];
+        PVector start = new PVector(x + blobPVectors[index].x, blobsRegionHeight / 2.0 + random(-2, 2));
+        PVector startVelocity = new PVector(initialdx + random(-0.5, 0.5), random(-1, 2));
+        Blobby blobby = new Blobby(start, startVelocity, blobbyColor, BlobbyType.Splody);
+        blobbies.add(blobby);
+      }
     }
   }
   
@@ -278,6 +344,22 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     
     blendMode(BLEND);
     colorMode(RGB, 100);
+    //for (int i = 0; i < leftWaveWidth; ++i) {
+    //  color c = blobColors[(int)random(0, (int)blobColors.length)];
+    //  stroke(c);
+    //  float x = this.x - i - blobWidth;
+    //  float y = (i / leftWaveWidth) * height;
+    //  line(x, y, x, height);
+    //}
+    //for (int i = 0; i < rightWaveWidth; ++i) {
+    //  color c = blobColors[(int)random(0, (int)blobColors.length)];
+    //  stroke(c);
+    //  float x = this.x + i + blobWidth;
+    //  float y = (i / rightWaveWidth) * height;
+    //  line(x, y, x, height);
+    //}
+
+        
     noStroke();
     for (int i = 0; i < blobPVectors.length; ++i) {
       PVector sub = blobPVectors[i];
@@ -300,7 +382,7 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     
     for (int i = blobbies.size() - 1; i >= 0; --i) {
       Blobby b = blobbies.get(i);
-      if (b.x < 0 || b.x > blobsRegionWidth) {
+      if (b.isDead()) {
         blobbies.remove(i);
       }
       b.update();
