@@ -153,8 +153,6 @@ public class Blob implements GestureDelegate
     
     PVector leftFootPx = coordsForJoint(joints[KinectPV2.JointType_FootLeft]);
     PVector rightFootPx = coordsForJoint(joints[KinectPV2.JointType_FootRight]);
-    PVector leftKneePx = coordsForJoint(joints[KinectPV2.JointType_KneeLeft]);
-    PVector rightKneePx = coordsForJoint(joints[KinectPV2.JointType_KneeRight]);
     
     final float footWaveThreshold = 21.0;
     
@@ -171,8 +169,6 @@ public class Blob implements GestureDelegate
       shootSplody(2.0);
     }
     this.rightFootOut = rightFootOut;
-    
-    
     
     if (visualDebug) {
       blendMode(BLEND);
@@ -217,6 +213,7 @@ public class Blob implements GestureDelegate
       
       float spineDistance = spineBasePx.y - kIdealSpineBase;
       float headDistance = headPx.y - kIdealHead;
+      //println("headDistance = ", headDistance, ", spineDistance = ", spineDistance);
       if (abs(spineDistance) > kGraceThreshold || abs(headDistance) > kGraceThreshold) {
         float spineRedness = abs(spineDistance) > kGraceThreshold ? (abs(spineDistance) - kGraceThreshold) * 100 : 0.0;
         float headRedness = abs(headDistance) > kGraceThreshold ? (abs(headDistance) - kGraceThreshold) * 100 : 0.0;
@@ -344,22 +341,7 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     
     blendMode(BLEND);
     colorMode(RGB, 100);
-    //for (int i = 0; i < leftWaveWidth; ++i) {
-    //  color c = blobColors[(int)random(0, (int)blobColors.length)];
-    //  stroke(c);
-    //  float x = this.x - i - blobWidth;
-    //  float y = (i / leftWaveWidth) * height;
-    //  line(x, y, x, height);
-    //}
-    //for (int i = 0; i < rightWaveWidth; ++i) {
-    //  color c = blobColors[(int)random(0, (int)blobColors.length)];
-    //  stroke(c);
-    //  float x = this.x + i + blobWidth;
-    //  float y = (i / rightWaveWidth) * height;
-    //  line(x, y, x, height);
-    //}
-
-        
+    
     noStroke();
     for (int i = 0; i < blobPVectors.length; ++i) {
       PVector sub = blobPVectors[i];

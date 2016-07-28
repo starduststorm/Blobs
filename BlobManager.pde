@@ -111,6 +111,16 @@ public class BlobManager
   public void update()
   {
     _updateBlobs();    
+    
+    // Draw FPS if in visual debug mode anywhere
+    if (this.anyVisualDebug()) {
+      blendMode(BLEND);
+      noStroke();
+      fill(#000000);
+      rect(0, 0, 22, height);
+      fill(#FFFFFF);
+      text(String.format("%.1f", frameRate), 2, displayHeight - 1);
+    }
   }
   
   public void close()

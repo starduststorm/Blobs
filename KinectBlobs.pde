@@ -8,17 +8,25 @@ import java.util.*;
 
 import KinectPV2.*;
 
-import ddf.minim.*;
-Minim minim;
-AudioInput in;
-
-//PGraphics pg;
-
 DeviceRegistry registry;
 TestObserver testObserver;
 
 KinectPV2 kinect;
 BlobManager blobManager;
+SpectrumAnalyzer spectrum;
+
+boolean first = true;
+
+int timeBlobsLastSeen = -1;
+int timeBlobsFirstSeen = -1;
+
+final int displayHeight = 8;
+final int displayWidth = 240;
+
+final int blobsOriginY = 16;
+final int blobsOriginX = 0;
+final int blobsRegionHeight = displayHeight;
+final int blobsRegionWidth = displayWidth;
 
 class TestObserver implements Observer {
   public boolean hasStrips = false;
@@ -34,7 +42,7 @@ class TestObserver implements Observer {
 void setup()
 {
   //size(1536, 440, P3D);
-  size(240, 8, P3D);
+  size(240, 24, P3D);
   frameRate(60);
   
   // Init pixelpusher
@@ -56,17 +64,10 @@ void setup()
   
   blobManager = new BlobManager(kinect);
   
-  //pg = createGraphics(blobsRegionWidth, blobsRegionHeight);
   textSize(8);
+  
+  spectrum = new SpectrumAnalyzer(this);
 }
-
-boolean first = true;
-
-int timeBlobsLastSeen = -1;
-int blobsXOffset = 0;
-int blobsYOffset = 0;//430;
-int blobsRegionHeight = 8;
-int blobsRegionWidth = 240;//512;
 
 void draw()
 {
@@ -81,6 +82,13 @@ void draw()
        background(0, 0, 0);
        first = false;
     }
+    
+    
+    blendMode(BLEND);
+    colorMode(RGB, 100);
+    fill(0, 0, 0);
+    noStroke();
+    rect(0, 0, displayWidth, displayHeight);
     
     //blendMode(BLEND);
     //colorMode(RGB, 100);
@@ -116,47 +124,62 @@ void draw()
     if (numStrips == 0)
       return;
     
-    //translate(0, blobsYOffset);
-    blobManager.update();
-    //translate(0, -blobsYOffset);
-        
-    if (blobManager.hasBlobs()) {
-        timeBlobsLastSeen = millis();
-    }
-    
-    // Fade out the old blobs
+    // Fade out the previous frame
+    translate(blobsOriginX, blobsOriginY);
     colorMode(RGB, 100);
     blendMode(SUBTRACT);
-    int fadeRate = (blobManager.hasBlobs() || (millis() - timeBlobsLastSeen < 2000) ? 2 : 20);
+    int fadeRate = 2;
     fill(fadeRate, fadeRate, fadeRate, 100);
     noStroke();
-    rect(blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
+    rect(0, 0, blobsRegionWidth, blobsRegionHeight);
+    blobManager.update();
+    translate(-blobsOriginX, -blobsOriginY);
     
-    // Visual debug
-    if (blobManager.anyVisualDebug()) {
-      blendMode(BLEND);
-      noStroke();
-      fill(#000000);
-      rect(0, 0, 22, height);
-      fill(#FFFFFF);
-      text(String.format("%.1f", frameRate), 2, height / 2 + 1);
+    // Copy blobs pixels into the display
+    blendMode(BLEND);
+    copy(blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight, 0, 0, displayWidth, displayHeight);
+       
+    if (blobManager.hasBlobs()) {
+      if (millis() - timeBlobsLastSeen > 100) {
+        timeBlobsFirstSeen = millis();
+      }
+      timeBlobsLastSeen = millis();
     }
     
-    // Render the scene
-    int x=0;
-    int y=0;
-    int stripy = 0;
-    int yscale = blobsRegionHeight / strips.size();
-    for (Strip strip : strips) {
-     int xscale = blobsRegionWidth / strip.getLength();
-     for (int stripx = 0; stripx < strip.getLength(); stripx++) {
-       x = stripx * xscale + blobsXOffset;
-       y = stripy * yscale + blobsYOffset; 
-       color c = get(x, y);
-       strip.setPixel(c, stripx);
-     }
-     stripy++;
+    // Background display
+    
+    // fade wave in and out with blobs
+    float blobsWaveformAlpha;
+    float timeSinceBlobAppearance = millis() - timeBlobsFirstSeen;
+    float timeSinceLastBlob = millis() - timeBlobsLastSeen;
+    if (timeSinceLastBlob > 100) {
+      blobsWaveformAlpha = min(100, max(10, timeSinceLastBlob / 100));
+    } else {
+      blobsWaveformAlpha = max(10, 100 - timeSinceBlobAppearance / 25);
     }
+    
+    spectrum.drawWithMaxAlpha(blobsWaveformAlpha);
+    
+    renderRegionToStrand(0, 0, displayWidth, displayHeight);
+  }
+}
+
+public void renderRegionToStrand(int regionStartX, int regionStartY, int regionWidth, int regionHeight)
+{
+  List<Strip> strips = registry.getStrips();
+  int x=0;
+  int y=0;
+  int stripy = 0;
+  int yscale = regionHeight / strips.size();
+  for (Strip strip : strips) {
+   int xscale = regionWidth / strip.getLength();
+   for (int stripx = 0; stripx < strip.getLength(); stripx++) {
+     x = stripx * xscale + regionStartX;
+     y = stripy * yscale + regionStartY; 
+     color c = get(x, y);
+     strip.setPixel(c, stripx);
+   }
+   stripy++;
   }
 }
 
