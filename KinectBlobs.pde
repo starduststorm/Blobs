@@ -161,7 +161,7 @@ void draw()
     
     spectrum.drawWithAlphaMultiplier(blobsAlphaLimiter);
     
-    boolean makeNewBits = millis() > 2000 && !blobManager.hasBlobs() && !spectrum.isWaveformDisplayed();
+    boolean makeNewBits = millis() > 20000 && !blobManager.hasBlobs() && !spectrum.isWaveformDisplayed();
     bitsPattern.update(makeNewBits);
     bitsPattern.draw();
     
