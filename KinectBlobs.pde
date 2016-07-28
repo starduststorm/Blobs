@@ -14,6 +14,7 @@ TestObserver testObserver;
 KinectPV2 kinect;
 BlobManager blobManager;
 SpectrumAnalyzer spectrum;
+BitsPattern bitsPattern;
 
 boolean first = true;
 
@@ -67,6 +68,7 @@ void setup()
   textSize(8);
   
   spectrum = new SpectrumAnalyzer(this);
+  bitsPattern = new BitsPattern();
 }
 
 void draw()
@@ -82,7 +84,6 @@ void draw()
        background(0, 0, 0);
        first = false;
     }
-    
     
     blendMode(BLEND);
     colorMode(RGB, 100);
@@ -149,16 +150,20 @@ void draw()
     // Background display
     
     // fade wave in and out with blobs
-    float blobsWaveformAlpha;
+    float blobsAlphaLimiter;
     float timeSinceBlobAppearance = millis() - timeBlobsFirstSeen;
     float timeSinceLastBlob = millis() - timeBlobsLastSeen;
     if (timeSinceLastBlob > 100) {
-      blobsWaveformAlpha = min(100, max(10, timeSinceLastBlob / 100));
+      blobsAlphaLimiter = min(1.0, max(0.1, (timeSinceLastBlob - 100) / 5000));
     } else {
-      blobsWaveformAlpha = max(10, 100 - timeSinceBlobAppearance / 25);
+      blobsAlphaLimiter = max(0.15, 1.0 - timeSinceBlobAppearance / 2500);
     }
     
-    spectrum.drawWithMaxAlpha(blobsWaveformAlpha);
+    spectrum.drawWithAlphaMultiplier(blobsAlphaLimiter);
+    
+    boolean makeNewBits = millis() > 2000 && !blobManager.hasBlobs() && !spectrum.isWaveformDisplayed();
+    bitsPattern.update(makeNewBits);
+    bitsPattern.draw();
     
     renderRegionToStrand(0, 0, displayWidth, displayHeight);
   }

@@ -14,6 +14,8 @@ public class SpectrumAnalyzer
   float volumeRunningAverage = 0;
   final int kVolumeFrameCount = 300; // how many frames to run the running average over
   
+  boolean waveformVisible;
+  
   public SpectrumAnalyzer(PApplet sketch)
   {
     fft = new FFT(sketch, kAudioBands);
@@ -22,7 +24,7 @@ public class SpectrumAnalyzer
     fft.input(audioIn);
   }
   
-  public void drawWithMaxAlpha(float maxAlpha)
+  public void drawWithAlphaMultiplier(float alphaMultiplier)
   {
     fft.analyze(audioSpectrum);
     
@@ -49,7 +51,11 @@ public class SpectrumAnalyzer
       volumeWaveformAlpha = 100 * max(0, 5 * volumeRunningAverage / kVolumeThreshold - 4);
     }
     
-    float waveformAlpha = 0.4 * min(maxAlpha, volumeWaveformAlpha);
+    float waveformAlpha = 0.4 * alphaMultiplier * volumeWaveformAlpha;
+    waveformVisible = (waveformAlpha > 0);
+    if (!waveformVisible) {
+      return;
+    }
     
     blendMode(BLEND);
     colorMode(HSB, 100);
@@ -80,5 +86,10 @@ public class SpectrumAnalyzer
       
       prevAmp = amp;
     }
+  }
+  
+  public boolean isWaveformDisplayed()
+  {
+    return waveformVisible;
   }
 }
