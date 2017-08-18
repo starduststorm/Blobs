@@ -32,11 +32,13 @@ final int blobsRegionWidth = displayWidth;
 
 class TestObserver implements Observer {
   public boolean hasStrips = false;
+  Object device;
   public void update(Observable registry, Object updatedDevice) {
     //println("Registry changed!");
-    if (updatedDevice != null) {
+    if (updatedDevice != null && device == null) {
       println("Device change: " + updatedDevice);
     }
+    device = updatedDevice;
     this.hasStrips = true;
   }
 }
@@ -159,7 +161,7 @@ void draw()
     if (activeIdlePattern == null) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
-      if (!idlePattern.isRunning() && !idlePattern.isStopping()) {
+      if (!idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
         idlePattern.startPattern();
         activeIdlePattern = idlePattern;
       }
@@ -175,12 +177,18 @@ void draw()
       activeIdlePattern = null;
     } else if (pattern.isRunning() || pattern.isStopping()) {
       pattern.update();
+    } else {
+      pattern.idleUpdate();
     }
   }
   
-  if (activeIdlePattern != null && millis() - activeIdlePattern.startMillis > 1000 * 60 * 2) {
-    activeIdlePattern.lazyStop();
-    activeIdlePattern = null;
+  // time out idle patterns after some minutes
+  final int kIdlePatternTimeout = 1000 * 60 * 2;
+  if (activeIdlePattern != null && millis() - activeIdlePattern.startMillis > kIdlePatternTimeout) {
+    if (activeIdlePattern.wantsToIdleStop()) {
+      activeIdlePattern.lazyStop();
+      activeIdlePattern = null;
+    }
   }
   
   renderRegionToStrand(0, 0, displayWidth, displayHeight);

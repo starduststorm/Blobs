@@ -14,8 +14,6 @@ public class SpectrumAnalyzer extends IdlePattern
   float volumeRunningAverage = 0;
   final int kVolumeFrameCount = 300; // how many frames to run the running average over
   
-  float volumeAlpha;
-  
   public SpectrumAnalyzer(int displayWidth, int displayHeight, PApplet sketch)
   {
     super(displayWidth, displayHeight);
@@ -25,14 +23,14 @@ public class SpectrumAnalyzer extends IdlePattern
     fft.input(audioIn);
   }
   
-  void updateWaveform()
+  public void idleUpdate()
   {
     fft.analyze(audioSpectrum);
     
     float volumePeak = 0;
     for (int i = 0; i < kAudioBands; ++i) {
       // amplify and balance across the banner
-      float moddedAudio = audioSpectrum[i] * blobsRegionHeight * 100 * (i/8.0+4);
+      float moddedAudio = audioSpectrum[i] * blobsRegionHeight * 200 * (i / 8.0 + 4);
       
       final float normCount = 5.0;
       normalizedSpectrum[i] = (normalizedSpectrum[i] * (normCount - 1) + moddedAudio) / normCount;
@@ -43,34 +41,55 @@ public class SpectrumAnalyzer extends IdlePattern
     }
     
     volumeRunningAverage = (volumeRunningAverage * (kVolumeFrameCount - 1) + volumePeak) / kVolumeFrameCount;  
-    
-    volumeAlpha = 100;
-    
+  }
+  
+  public boolean wantsToRun()
+  {
+    this.idleUpdate();
+    return volumeRunningAverage > kVolumeThreshold;
+  }
+  
+  public boolean wantsToIdleStop()
+  {
+    return volumeRunningAverage < 2 * kVolumeThreshold;
+  }
+  
+  public void update()
+  {
+    this.idleUpdate();
     if (volumeRunningAverage < kVolumeThreshold) {
-      // fade waveform out if quiet for too long
-      volumeAlpha = 100 * max(0, 5 * volumeRunningAverage / kVolumeThreshold - 4);
+      if (this.isRunning()) {
+        this.lazyStop();
+      }
     }
-  }
-  
-  boolean wantsToRun()
-  {
-    this.updateWaveform();
-    return this.volumeAlpha > 0;
-  }
-  
-  void update()
-  {
-    this.updateWaveform();
     this.draw();
   }
   
-  public void draw()
+  void draw()
   {
+    float startStopAlpha = 1.0;
+    float volumeAlpha = 1;
+    
+    if (volumeRunningAverage < kVolumeThreshold) {
+      // fade waveform out if quiet for too long
+      volumeAlpha = max(0, min(1, 5 * volumeRunningAverage / kVolumeThreshold - 4));
+    }
+    
+    if (this.isStopping()) {
+      startStopAlpha = 1 - (millis() - stopMillis) / 2000;
+      if (startStopAlpha < 0) {
+        this.stopCompleted();
+        return;
+      }
+    } else if (millis() - startMillis < 2000) {
+      startStopAlpha = min(1.0, (millis() - startMillis) / 2000.0);
+    }
+    
     blendMode(BLEND);
     colorMode(HSB, 100);
     
     float prevAmp = -1;
-    float waveformAlpha = 0.4 * volumeAlpha;
+    float waveformAlpha = 0.5 * volumeAlpha * startStopAlpha;
     
     for (int i = 0; i < kAudioBands; ++i) {
       float amp = normalizedSpectrum[i];
@@ -90,7 +109,7 @@ public class SpectrumAnalyzer extends IdlePattern
         float hue = (i + millis() / 200.0 + rangeMin) % ((rangeMin + rangeLen) * 2);
         hue = (hue > (rangeMin + rangeLen) ? (rangeMin + rangeLen)*2 - hue : hue);
         //float hue = (amp * 6 + millis() / 100.0);
-        stroke(hue % 100, 100, 100, waveformAlpha);
+        stroke(hue % 100, 100, 100, 100 * waveformAlpha);
 
         line(displayWidth / 2.0 + stretch * i - stretch, prevAmp, displayWidth / 2.0 + stretch * i, amp);
         line(displayWidth / 2.0 - stretch * i + stretch, prevAmp, displayWidth / 2.0 - stretch* i, amp);

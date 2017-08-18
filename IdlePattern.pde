@@ -19,17 +19,25 @@ public abstract class IdlePattern
   
   public void startPattern()
   {
+    println("Starting " + this + "...");
     this.startMillis = millis();
     this.stopMillis = -1;
   }
   
+  public boolean wantsToIdleStop()
+  {
+    return true;
+  }
+  
   public void lazyStop()
   {
+    println("Stopping " + this + "...");
     this.stopMillis = millis();
   }
   
   public final void stopCompleted()
   {
+    println("Stopped " + this + ".");
     this.stopMillis = -1;
     this.startMillis = -1;
   }
@@ -45,4 +53,8 @@ public abstract class IdlePattern
   }
   
   public abstract void update();
+  
+  public void idleUpdate()
+  {
+  }
 }
