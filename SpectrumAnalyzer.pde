@@ -1,6 +1,6 @@
 import processing.sound.*;
 
-public class SpectrumAnalyzer
+public class SpectrumAnalyzer extends IdlePattern
 {
   FFT fft;
   AudioIn audioIn;
@@ -14,22 +14,22 @@ public class SpectrumAnalyzer
   float volumeRunningAverage = 0;
   final int kVolumeFrameCount = 300; // how many frames to run the running average over
   
-  boolean waveformVisible;
+  float volumeAlpha;
   
-  public SpectrumAnalyzer(PApplet sketch)
+  public SpectrumAnalyzer(int displayWidth, int displayHeight, PApplet sketch)
   {
+    super(displayWidth, displayHeight);
     fft = new FFT(sketch, kAudioBands);
     audioIn = new AudioIn(sketch, 0);
     audioIn.start();
     fft.input(audioIn);
   }
   
-  public void drawWithAlphaMultiplier(float alphaMultiplier)
+  void updateWaveform()
   {
     fft.analyze(audioSpectrum);
     
     float volumePeak = 0;
-    float prevAmp = -1;
     for (int i = 0; i < kAudioBands; ++i) {
       // amplify and balance across the banner
       float moddedAudio = audioSpectrum[i] * blobsRegionHeight * 100 * (i/8.0+4);
@@ -44,21 +44,33 @@ public class SpectrumAnalyzer
     
     volumeRunningAverage = (volumeRunningAverage * (kVolumeFrameCount - 1) + volumePeak) / kVolumeFrameCount;  
     
-    float volumeWaveformAlpha = 100;
+    volumeAlpha = 100;
     
     if (volumeRunningAverage < kVolumeThreshold) {
       // fade waveform out if quiet for too long
-      volumeWaveformAlpha = 100 * max(0, 5 * volumeRunningAverage / kVolumeThreshold - 4);
+      volumeAlpha = 100 * max(0, 5 * volumeRunningAverage / kVolumeThreshold - 4);
     }
-    
-    float waveformAlpha = 0.4 * alphaMultiplier * volumeWaveformAlpha;
-    waveformVisible = (waveformAlpha > 0);
-    if (!waveformVisible) {
-      return;
-    }
-    
+  }
+  
+  boolean wantsToRun()
+  {
+    this.updateWaveform();
+    return this.volumeAlpha > 0;
+  }
+  
+  void update()
+  {
+    this.updateWaveform();
+    this.draw();
+  }
+  
+  public void draw()
+  {
     blendMode(BLEND);
     colorMode(HSB, 100);
+    
+    float prevAmp = -1;
+    float waveformAlpha = 0.4 * volumeAlpha;
     
     for (int i = 0; i < kAudioBands; ++i) {
       float amp = normalizedSpectrum[i];
@@ -88,8 +100,4 @@ public class SpectrumAnalyzer
     }
   }
   
-  public boolean isWaveformDisplayed()
-  {
-    return waveformVisible;
-  }
 }

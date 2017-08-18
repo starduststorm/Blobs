@@ -13,8 +13,9 @@ TestObserver testObserver;
 
 KinectPV2 kinect;
 BlobManager blobManager;
-SpectrumAnalyzer spectrum;
-BitsPattern bitsPattern;
+
+ArrayList<IdlePattern> idlePatterns;
+IdlePattern activeIdlePattern = null;
 
 boolean first = true;
 
@@ -67,106 +68,122 @@ void setup()
   
   textSize(8);
   
-  spectrum = new SpectrumAnalyzer(this);
-  bitsPattern = new BitsPattern();
+  idlePatterns = new ArrayList<IdlePattern>();
+  idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
+  idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
 }
 
 void draw()
 {
-  if (testObserver.hasStrips) {   
-    registry.startPushing();
-    registry.setExtraDelay(0);
-    registry.setAutoThrottle(true);
-    registry.setAntiLog(true);    
-    List<Strip> strips = registry.getStrips();
-   
-    if (first) {
-       background(0, 0, 0);
-       first = false;
-    }
-    
-    blendMode(BLEND);
-    colorMode(RGB, 100);
-    fill(0, 0, 0);
-    noStroke();
-    rect(0, 0, displayWidth, displayHeight);
-    
-    //blendMode(BLEND);
-    //colorMode(RGB, 100);
-    
-    //fill(0);
-    //stroke(0);
-    //rect(0, 0, width, height - blobsRegionHeight);
-    
-    //image(kinect.getDepthImage(), 0, 0);
-    //image(kinect.getInfraredImage(), 512*2, 0);
-
-    //PImage bodyImage = kinect.getBodyTrackImage();
-    //bodyImage.filter(INVERT);
-    //bodyImage.filter(DILATE);
-    //image(bodyImage, 512, 0);
-    
-    //fill(100, 0, 0);
-    //stroke(100, 0, 0);
-    //text(String.format("fps: %.1f", frameRate), 10, 15);
-    //blendMode(ADD);
-    
-    //pg.beginDraw();
-    //pg.background(0, 0, 0);
-    //translate(blobsRegionWidth / 2, blobsRegionHeight / 2);
-    //scale(0.5, 1.5);
-    //translate(-blobsRegionWidth / 2, -blobsRegionHeight / 2);
-    //image(bodyImage, 0, 0, blobsRegionWidth, blobsRegionHeight);
-    //image(bodyImage, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
-    //pg.endDraw();
-    //image(pg, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
-       
-    int numStrips = strips.size();
-    if (numStrips == 0)
-      return;
-    
-    // Fade out the previous frame
-    translate(blobsOriginX, blobsOriginY);
-    colorMode(RGB, 100);
-    blendMode(SUBTRACT);
-    int fadeRate = 2;
-    fill(fadeRate, fadeRate, fadeRate, 100);
-    noStroke();
-    rect(0, 0, blobsRegionWidth, blobsRegionHeight);
-    blobManager.update();
-    translate(-blobsOriginX, -blobsOriginY);
-    
-    // Copy blobs pixels into the display
-    blendMode(BLEND);
-    copy(blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight, 0, 0, displayWidth, displayHeight);
-       
-    if (blobManager.hasBlobs()) {
-      if (millis() - timeBlobsLastSeen > 100) {
-        timeBlobsFirstSeen = millis();
-      }
-      timeBlobsLastSeen = millis();
-    }
-    
-    // Background display
-    
-    // fade wave in and out with blobs
-    float blobsAlphaLimiter;
-    float timeSinceBlobAppearance = millis() - timeBlobsFirstSeen;
-    float timeSinceLastBlob = millis() - timeBlobsLastSeen;
-    if (timeSinceLastBlob > 100) {
-      blobsAlphaLimiter = min(1.0, max(0.1, (timeSinceLastBlob - 100) / 5000));
-    } else {
-      blobsAlphaLimiter = max(0.15, 1.0 - timeSinceBlobAppearance / 2500);
-    }
-    
-    spectrum.drawWithAlphaMultiplier(blobsAlphaLimiter);
-    
-    boolean makeNewBits = millis() > 20000 && !blobManager.hasBlobs() && !spectrum.isWaveformDisplayed();
-    bitsPattern.update(makeNewBits);
-    bitsPattern.draw();
-    
-    renderRegionToStrand(0, 0, displayWidth, displayHeight);
+  int currentMillis = millis();
+  
+  if (!testObserver.hasStrips) {
+    return;
   }
+  
+  registry.startPushing();
+  registry.setExtraDelay(0);
+  registry.setAutoThrottle(true);
+  registry.setAntiLog(true);    
+  List<Strip> strips = registry.getStrips();
+ 
+  if (first) {
+     background(0, 0, 0);
+     first = false;
+  }
+  
+  blendMode(BLEND);
+  colorMode(RGB, 100);
+  fill(0, 0, 0);
+  noStroke();
+  rect(0, 0, displayWidth, displayHeight);
+  
+  //blendMode(BLEND);
+  //colorMode(RGB, 100);
+  
+  //fill(0);
+  //stroke(0);
+  //rect(0, 0, width, height - blobsRegionHeight);
+  
+  //image(kinect.getDepthImage(), 0, 0);
+  //image(kinect.getInfraredImage(), 512*2, 0);
+
+  //PImage bodyImage = kinect.getBodyTrackImage();
+  //bodyImage.filter(INVERT);
+  //bodyImage.filter(DILATE);
+  //image(bodyImage, 512, 0);
+  
+  //fill(100, 0, 0);
+  //stroke(100, 0, 0);
+  //text(String.format("fps: %.1f", frameRate), 10, 15);
+  //blendMode(ADD);
+  
+  //pg.beginDraw();
+  //pg.background(0, 0, 0);
+  //translate(blobsRegionWidth / 2, blobsRegionHeight / 2);
+  //scale(0.5, 1.5);
+  //translate(-blobsRegionWidth / 2, -blobsRegionHeight / 2);
+  //image(bodyImage, 0, 0, blobsRegionWidth, blobsRegionHeight);
+  //image(bodyImage, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
+  //pg.endDraw();
+  //image(pg, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
+     
+  int numStrips = strips.size();
+  if (numStrips == 0)
+    return;
+  
+  // Fade out the previous frame
+  translate(blobsOriginX, blobsOriginY);
+  colorMode(RGB, 100);
+  blendMode(SUBTRACT);
+  int fadeRate = 2;
+  fill(fadeRate, fadeRate, fadeRate, 100);
+  noStroke();
+  rect(0, 0, blobsRegionWidth, blobsRegionHeight);
+  blobManager.update();
+  translate(-blobsOriginX, -blobsOriginY);
+  
+  // Copy blobs pixels into the display
+  blendMode(BLEND);
+  copy(blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight, 0, 0, displayWidth, displayHeight);
+     
+  if (blobManager.hasBlobs()) {
+    if (millis() - timeBlobsLastSeen > 100) {
+      timeBlobsFirstSeen = millis();
+    }
+    timeBlobsLastSeen = millis();
+  }
+  
+  // Start patterns a second after we stop tracking someone
+  if (currentMillis - timeBlobsLastSeen > 1000) {
+    if (activeIdlePattern == null) {
+      int choice = (int)random(idlePatterns.size());
+      IdlePattern idlePattern = idlePatterns.get(choice);
+      if (!idlePattern.isRunning() && !idlePattern.isStopping()) {
+        idlePattern.startPattern();
+        activeIdlePattern = idlePattern;
+      }
+    }
+  }
+  
+  blendMode(BLEND);
+  
+  // Update or stop patterns
+  for (IdlePattern pattern : idlePatterns) {
+    if (blobManager.hasBlobs() && pattern.isRunning()) {
+      pattern.lazyStop();
+      activeIdlePattern = null;
+    } else if (pattern.isRunning() || pattern.isStopping()) {
+      pattern.update();
+    }
+  }
+  
+  if (activeIdlePattern != null && millis() - activeIdlePattern.startMillis > 1000 * 60 * 2) {
+    activeIdlePattern.lazyStop();
+    activeIdlePattern = null;
+  }
+  
+  renderRegionToStrand(0, 0, displayWidth, displayHeight);
 }
 
 public void renderRegionToStrand(int regionStartX, int regionStartY, int regionWidth, int regionHeight)
