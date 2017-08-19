@@ -73,8 +73,9 @@ void setup()
   textSize(8);
   
   idlePatterns = new ArrayList<IdlePattern>();
-  idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
-  idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
+  //idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
+  //idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
+  idlePatterns.add(new FlamingoPattern(displayWidth, displayHeight));
 }
 
 void draw()
@@ -209,6 +210,7 @@ public void renderRegionToStrand(int regionStartX, int regionStartY, int regionW
      x = stripx * xscale + regionStartX;
      y = stripy * yscale + regionStartY; 
      color c = get(x, y);
+     c = color(red(c), blue(c), green(c)); // notorious
      strip.setPixel(c, stripx);
    }
    stripy++;
