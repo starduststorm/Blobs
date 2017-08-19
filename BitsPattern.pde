@@ -1,5 +1,3 @@
-Random rand = new Random();
-
 private int randomSign()
 {
   return (rand.nextBoolean() ? 1 : -1);
@@ -60,7 +58,7 @@ public class BitsPattern extends IdlePattern
     super.startPattern();
     colorMode(RGB, 100);
     // bits re-appearing, get a new color
-    color[] colors = {color(5,70,5), color(70, 5, 5), color(5, 5, 70), color(255,20,147)};
+    color[] colors = {color(5,70,5), color(70, 5, 5), color(5, 5, 70), color(100,8,58)};
     bitsColor = colors[(int)random(colors.length)];
     do {
       bitsColor = color((int)random(100),(int)random(100),(int)random(100));
@@ -71,7 +69,7 @@ public class BitsPattern extends IdlePattern
   public void update()
   {
     if (this.isRunning()) {
-      for (int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 2; ++i) {
         Bit newBit = new Bit(new PVector((int)random(0, displayWidth) + 0.5, (int)random(0, displayHeight)));
         bits.add(newBit);
       }

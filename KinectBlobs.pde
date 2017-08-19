@@ -14,6 +14,8 @@ TestObserver testObserver;
 KinectPV2 kinect;
 BlobManager blobManager;
 
+Random rand = new Random();
+
 ArrayList<IdlePattern> idlePatterns;
 IdlePattern activeIdlePattern = null;
 
