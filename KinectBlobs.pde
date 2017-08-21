@@ -6,7 +6,7 @@ import com.heroicrobot.dropbit.devices.pixelpusher.PixelPusher;
 
 import java.util.*;
 
-final boolean useKinect = false;
+final boolean useKinect = true;
 import KinectPV2.*;
 
 DeviceRegistry registry;
@@ -19,6 +19,7 @@ Random rand = new Random();
 
 ArrayList<IdlePattern> idlePatterns;
 IdlePattern activeIdlePattern = null;
+IdlePattern lastIdlePattern = null;
 
 boolean first = true;
 
@@ -169,9 +170,10 @@ void draw()
     if (activeIdlePattern == null) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
-      if (!idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
+      if (idlePattern != lastIdlePattern && !idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
         idlePattern.startPattern();
         activeIdlePattern = idlePattern;
+        lastIdlePattern = idlePattern;
       }
     }
   }
@@ -183,7 +185,7 @@ void draw()
     if (blobManager.hasBlobs() && pattern.isRunning()) {
       pattern.lazyStop();
       activeIdlePattern = null;
-      // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter, and implicitly prevents repeats 
+      // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter
     } else if (pattern.isRunning() || pattern.isStopping()) {
       pattern.update();
     } else {
