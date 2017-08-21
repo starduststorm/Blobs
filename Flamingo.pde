@@ -4,6 +4,9 @@ public enum FlamingoMode {
   Parade,
 };
 
+final int DirectionLeft = -1;
+final int DirectionRight = 1;
+
 public static <T extends Enum<?>> T randomEnum(Class<T> C)
 {
   Random random = new Random();
@@ -118,6 +121,7 @@ private class Flamingo {
     
     // may pause
     if (rand.nextInt(100) > 0) {
+      assert direction != 0;
       x += direction * speed;
       if (speed != 0) {
         legPose = (legPose + 1) % legImages.length;
@@ -137,7 +141,7 @@ private class Flamingo {
     pushMatrix();
     translate(x, 0, 0);
     scale(direction, 1, 1);
-    if (direction == -1) {
+    if (direction == DirectionLeft) {
       translate(-flamingoWidth, 0, 0);
     }
     
@@ -161,12 +165,18 @@ public class FlamingoPattern extends IdlePattern
   
   int paradeDuration; // seconds
   float paradePeak; // peak chance to spawn
+  boolean directionIsRandom;
   
   float spawnChance; // [0, 1] chance of adding a flamingo on tick
   
   int lastTick;
   int direction;
   final int justhowdamnbigtheparadeis = 20;
+  
+  public String toString()
+  {
+    return "FlamingoPattern mode " + mode;
+  }
   
   public FlamingoPattern(int displayWidth, int displayHeight)
   {
@@ -206,6 +216,7 @@ public class FlamingoPattern extends IdlePattern
     modeStart = millis();
     enterSubmode(0);
     spawnChance = 0.0;
+    directionIsRandom = false;
     
     switch(mode) {
       case WhereAmI:
@@ -215,19 +226,27 @@ public class FlamingoPattern extends IdlePattern
       case Parade:
         paradeDuration = 25;
         paradePeak = 0.1;
+        if (rand.nextFloat() < 0.3) {
+          directionIsRandom = true;
+        }
         break;
     }
+  }
+  
+  int randomDirection()
+  {
+    return (rand.nextBoolean() ? DirectionRight : DirectionLeft);
   }
   
   // ----------------------- Public methods ---------------------- //
   
   public void startPattern()
   {
-    super.startPattern();
+    direction = randomDirection();
     
-    direction = (rand.nextBoolean() ? 1 : -1);
     startMode(randomEnum(FlamingoMode.class));
-    //startMode(FlamingoMode.WhereAmI);
+    
+    super.startPattern();
   }
   
   private void updateMode(int tickMillis)
@@ -252,7 +271,7 @@ public class FlamingoPattern extends IdlePattern
               lastAction = millis();
             }
           } else if (submode == 2) {
-            direction = (rand.nextBoolean() ? -1 : 1);
+            direction = randomDirection();
             f.direction = direction;
             f.facingFront = true;
             f.speed = 1;
@@ -262,6 +281,9 @@ public class FlamingoPattern extends IdlePattern
         break;
       }
       case Parade:
+        if (directionIsRandom) {
+          direction = randomDirection();
+        }
         int paradeElapsed = millis() - modeStart;
         if (paradeElapsed < paradeDuration * 1000) {
           spawnChance = 0.5 * (1 + sin(paradeElapsed / (float)paradeDuration * 3.14159));
@@ -302,20 +324,25 @@ public class FlamingoPattern extends IdlePattern
     }
     
     if (flamingos.size() == 0) {
-      float r = rand.nextFloat();
-      if (mode == FlamingoMode.WhereAmI && isRunning() && r < 0.3) {
-        // 40% chance of getting chased by a parade
-        startMode(FlamingoMode.Parade);
-        paradeDuration = 15;
-        paradePeak = 0.18;
-      } else if (isRunning() && millis() - modeStart > 5000) {
-        // no flamingos and we've been running for more than 5 seconds as a sanity check 
-        lazyStop();
-      }
-      
       if (this.isStopping()) {
         this.stopCompleted();
+      } else {
+        if (mode == FlamingoMode.WhereAmI && isRunning() && rand.nextFloat() < 0.3) {
+          // 40% chance of getting chased by a parade
+          startMode(FlamingoMode.Parade);
+          // but denser
+          paradeDuration = 15;
+          paradePeak = 0.18;
+        } else if (isRunning() && millis() - modeStart > 5000) {
+          // no flamingos and we've been running for more than 5 seconds as a sanity check 
+          lazyStop();
+        }
       }
     }
+  }
+  
+  boolean wantsToIdleStop()
+  {
+    return false;
   }
 }

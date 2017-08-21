@@ -77,7 +77,7 @@ void setup()
   
   idlePatterns = new ArrayList<IdlePattern>();
   //idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
-  //idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
+  idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
   idlePatterns.add(new FlamingoPattern(displayWidth, displayHeight));
 }
 
@@ -182,11 +182,18 @@ void draw()
   for (IdlePattern pattern : idlePatterns) {
     if (blobManager.hasBlobs() && pattern.isRunning()) {
       pattern.lazyStop();
+      activeIdlePattern = null;
+      // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter, and implicitly prevents repeats 
     } else if (pattern.isRunning() || pattern.isStopping()) {
       pattern.update();
     } else {
       pattern.idleUpdate();
     }
+  }
+  
+  // clear out idle patterns that have stopped themselves
+  if (activeIdlePattern != null && !activeIdlePattern.isRunning()) {
+    activeIdlePattern = null;
   }
   
   // time out idle patterns after some minutes
@@ -196,10 +203,6 @@ void draw()
       activeIdlePattern.lazyStop();
       activeIdlePattern = null;
     }
-  }
-  // clear out idle patterns that have stopped themselves
-  if (activeIdlePattern != null && !activeIdlePattern.isRunning() && !activeIdlePattern.isStopping()) {
-    activeIdlePattern = null;
   }
   
   renderRegionToStrand(0, 0, displayWidth, displayHeight);
