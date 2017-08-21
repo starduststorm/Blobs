@@ -6,6 +6,7 @@ import com.heroicrobot.dropbit.devices.pixelpusher.PixelPusher;
 
 import java.util.*;
 
+final boolean useKinect = false;
 import KinectPV2.*;
 
 DeviceRegistry registry;
@@ -57,14 +58,16 @@ void setup()
   testObserver = new TestObserver();
   registry.addObserver(testObserver);
  
- // Init Kinect
-  kinect = new KinectPV2(this);   
-  //kinect.enableDepthImg(true);   
-  kinect.enableSkeletonDepthMap(true);
-  //kinect.enableSkeleton3DMap(true);
-  kinect.enableBodyTrackImg(true);
-  //kinect.enableInfraredImg(true);
-  kinect.init();
+ if (useKinect) {
+   // Init Kinect
+    kinect = new KinectPV2(this);   
+    //kinect.enableDepthImg(true);   
+    kinect.enableSkeletonDepthMap(true);
+    //kinect.enableSkeleton3DMap(true);
+    kinect.enableBodyTrackImg(true);
+    //kinect.enableInfraredImg(true);
+    kinect.init();
+ }
  
   prepareExitHandler();
   
@@ -145,7 +148,9 @@ void draw()
   fill(fadeRate, fadeRate, fadeRate, 100);
   noStroke();
   rect(0, 0, blobsRegionWidth, blobsRegionHeight);
-  blobManager.update();
+  if (useKinect) {
+    blobManager.update();
+  }
   translate(-blobsOriginX, -blobsOriginY);
   
   // Copy blobs pixels into the display
@@ -177,7 +182,6 @@ void draw()
   for (IdlePattern pattern : idlePatterns) {
     if (blobManager.hasBlobs() && pattern.isRunning()) {
       pattern.lazyStop();
-      activeIdlePattern = null;
     } else if (pattern.isRunning() || pattern.isStopping()) {
       pattern.update();
     } else {
@@ -187,11 +191,15 @@ void draw()
   
   // time out idle patterns after some minutes
   final int kIdlePatternTimeout = 1000 * 60 * 2;
-  if (activeIdlePattern != null && millis() - activeIdlePattern.startMillis > kIdlePatternTimeout) {
+  if (activeIdlePattern != null && activeIdlePattern.isRunning() && millis() - activeIdlePattern.startMillis > kIdlePatternTimeout) {
     if (activeIdlePattern.wantsToIdleStop()) {
       activeIdlePattern.lazyStop();
       activeIdlePattern = null;
     }
+  }
+  // clear out idle patterns that have stopped themselves
+  if (activeIdlePattern != null && !activeIdlePattern.isRunning() && !activeIdlePattern.isStopping()) {
+    activeIdlePattern = null;
   }
   
   renderRegionToStrand(0, 0, displayWidth, displayHeight);
