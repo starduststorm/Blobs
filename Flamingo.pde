@@ -1,4 +1,16 @@
 
+public enum FlamingoMode {
+  WhereAmI,
+  Parade,
+};
+
+public static <T extends Enum<?>> T randomEnum(Class<T> C)
+{
+  Random random = new Random();
+  int x = random.nextInt(C.getEnumConstants().length);
+  return C.getEnumConstants()[x];
+}
+
 String[][] body = { {"000000102",
                      "000003130",
                      "003113130",
@@ -81,41 +93,53 @@ private PImage[] imagesForData(String[][] data, color[] colors)
 
 private class Flamingo {
   int x;
-  int bodyPose;
+  boolean facingFront;
   int legPose;
-  int direction;
+  int direction; // 1 or -1
+  int speed; // pixels / tick at the moment
+  float swapHeadChance;
   
   public Flamingo(int d)
   {
-    this.direction = d;
+    speed = 1;
+    direction = d;
+    facingFront = true;
+    swapHeadChance = 0.1;
+    
     legPose = rand.nextInt(legImages.length);
-    bodyPose = rand.nextInt(bodyImages.length);
   }
   
   public void tick()
   {
     // preen
-    if (rand.nextInt(10) == 0) {
-      bodyPose = rand.nextInt(bodyImages.length);
+    if (rand.nextFloat() < swapHeadChance) {
+      facingFront = rand.nextBoolean();
     }
     
     // may pause
     if (rand.nextInt(100) > 0) {
-      x += direction;
-      legPose = (legPose + 1) % legImages.length;
+      x += direction * speed;
+      if (speed != 0) {
+        legPose = (legPose + 1) % legImages.length;
+      } else {
+        legPose = 0;
+      }
     }
   }
   
   public void draw()
   {
     blendMode(BLEND);
-    PImage bodyImg = bodyImages[this.bodyPose];
+    PImage bodyImg = bodyImages[facingFront ? 0 : 1];
     PImage legsImg = legImages[this.legPose];
     //tint(100, 50);
     
     pushMatrix();
     translate(x, 0, 0);
     scale(direction, 1, 1);
+    if (direction == -1) {
+      translate(-flamingoWidth, 0, 0);
+    }
     
     image(bodyImg, 0, 0);
     image(legsImg, 1, bodyImg.height);
@@ -128,8 +152,19 @@ private class Flamingo {
 public class FlamingoPattern extends IdlePattern
 {
   private LinkedList<Flamingo> flamingos;
+  
+  FlamingoMode mode;
+  int modeStart;
+  int submode;
+  int submodeStart;
+  int lastAction;
+  
+  int paradeDuration; // seconds
+  float paradePeak; // peak chance to spawn
+  
+  float spawnChance; // [0, 1] chance of adding a flamingo on tick
+  
   int lastTick;
-  int lastAdd;
   int direction;
   final int justhowdamnbigtheparadeis = 20;
   
@@ -147,44 +182,108 @@ public class FlamingoPattern extends IdlePattern
     flamingos = new LinkedList<Flamingo>();
   }
   
-  public void startParade()
+  void enterSubmode(int sm)
   {
-    direction = (rand.nextBoolean() ? 1 : -1);
-    //for (int i = 0; i < justhowdamnbigtheparadeis; ++i) {
-    //  Flamingo f = new Flamingo(direction);
-    //  f.x = (direction < 0 ? displayWidth : 0);
-    //  f.x -= direction * (i * flamingoWidth - 2 + rand.nextInt(15));
-    //  flamingos.addLast(f);
-    //}
+    submode = sm;
+    submodeStart = millis();
   }
+  
+  Flamingo spawnFlamingo(int direction)
+  {
+    Flamingo f = new Flamingo(direction);
+    if (direction > 0) {
+      f.x = -flamingoWidth;
+    } else {
+      f.x = displayWidth + flamingoWidth;
+    }
+    flamingos.addLast(f);
+    return f;
+  }
+  
+  void startMode(FlamingoMode m)
+  {
+    mode = m;
+    modeStart = millis();
+    enterSubmode(0);
+    spawnChance = 0.0;
+    
+    switch(mode) {
+      case WhereAmI:
+        Flamingo f = spawnFlamingo(direction);
+        f.swapHeadChance = 0;
+        break;
+      case Parade:
+        paradeDuration = 25;
+        paradePeak = 0.1;
+        break;
+    }
+  }
+  
+  // ----------------------- Public methods ---------------------- //
   
   public void startPattern()
   {
     super.startPattern();
-    startParade();
+    
+    direction = (rand.nextBoolean() ? 1 : -1);
+    startMode(randomEnum(FlamingoMode.class));
+    //startMode(FlamingoMode.WhereAmI);
+  }
+  
+  private void updateMode(int tickMillis)
+  {
+    switch(mode) {
+      case WhereAmI: {
+        if (flamingos.size() > 0) {
+          Flamingo f = flamingos.getFirst();
+          if (submode == 0) {
+            if (f.x == displayWidth / 2 + 12) {
+              f.speed = 0;
+              lastAction = millis();
+              enterSubmode(1);
+            }
+          } else if (submode == 1) {
+            if (millis() - lastAction > 1000) {
+              if (millis() - submodeStart > 4500) {
+                enterSubmode(2);
+              } else {
+                f.direction *= -1;
+              }
+              lastAction = millis();
+            }
+          } else if (submode == 2) {
+            direction = (rand.nextBoolean() ? -1 : 1);
+            f.direction = direction;
+            f.facingFront = true;
+            f.speed = 1;
+            enterSubmode(3);
+          }
+        }
+        break;
+      }
+      case Parade:
+        int paradeElapsed = millis() - modeStart;
+        if (paradeElapsed < paradeDuration * 1000) {
+          spawnChance = 0.5 * (1 + sin(paradeElapsed / (float)paradeDuration * 3.14159));
+          spawnChance *= paradePeak; // max density chance one flamingo ever 4 pixels
+        } else {
+          spawnChance = 0;
+        }
+        break;
+    }
   }
   
   public void update()
   {
     final float frametime = 1000/30.0;
     
-    if (flamingos.size() < justhowdamnbigtheparadeis) {
-      if (millis() - lastAdd > flamingoWidth * frametime) {
-        lastAdd = (int)(millis() - 2 + frametime * rand.nextInt(12));
-
-        Flamingo f = new Flamingo(direction);
-        if (direction > 0) {
-          f.x = -flamingoWidth;
-        } else {
-          f.x = displayWidth + flamingoWidth;
-        }
-        flamingos.addLast(f);
-        println("now have " + flamingos.size() + " flamingos");
-      }
-    }
-    
-    if (millis() - lastTick > frametime) {
+    int tickMillis = millis() - lastTick;
+    if (tickMillis > frametime) {
       lastTick = millis();
+      
+      if (!this.isStopping() && rand.nextFloat() < this.spawnChance) {
+        spawnFlamingo(direction);
+      }
       
       Iterator<Flamingo> it = flamingos.iterator();
       while (it.hasNext()) {
@@ -194,9 +293,29 @@ public class FlamingoPattern extends IdlePattern
           it.remove();
         }
       }
+      
+      updateMode(tickMillis);
     }
+    
     for (Flamingo flamingo : flamingos) {
       flamingo.draw();
+    }
+    
+    if (flamingos.size() == 0) {
+      float r = rand.nextFloat();
+      if (mode == FlamingoMode.WhereAmI && isRunning() && r < 0.3) {
+        // 40% chance of getting chased by a parade
+        startMode(FlamingoMode.Parade);
+        paradeDuration = 15;
+        paradePeak = 0.18;
+      } else if (isRunning() && millis() - modeStart > 5000) {
+        // no flamingos and we've been running for more than 5 seconds as a sanity check 
+        lazyStop();
+      }
+      
+      if (this.isStopping()) {
+        this.stopCompleted();
+      }
     }
   }
 }

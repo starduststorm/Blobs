@@ -31,8 +31,12 @@ public abstract class IdlePattern
   
   public void lazyStop()
   {
-    println("Stopping " + this + "...");
-    this.stopMillis = millis();
+    if (this.isRunning()) {
+      println("Stopping " + this + "...");
+      this.stopMillis = millis();
+    } else {
+      println("Can't lazy stop, not running " + this + "!");
+    }
   }
   
   public final void stopCompleted()
