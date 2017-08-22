@@ -2,12 +2,13 @@
 public enum FlamingoMode {
   WhereAmI,
   Parade,
+  Test,
 };
 
 final int DirectionLeft = -1;
 final int DirectionRight = 1;
 
-final int kImpactDuration = 1 * 1000;
+final int kDyingAnimationDuration = 1 * 600;
 
 public static <T extends Enum<?>> T randomEnum(Class<T> C)
 {
@@ -104,7 +105,8 @@ public class Flamingo {
   int speed; // pixels / tick at the moment
   float swapHeadChance;
   
-  int impactTime;
+  int life;
+  int dyingStart;
   color impactTint;
   
   public Flamingo(int d)
@@ -113,43 +115,64 @@ public class Flamingo {
     direction = d;
     facingFront = true;
     swapHeadChance = 0.1;
+    life = 2;
     
     legPose = rand.nextInt(legImages.length);
   }
   
+  public boolean isDead()
+  {
+    return life == 0 && (millis() - dyingStart) > kDyingAnimationDuration;
+  }
+  
   public void tick()
   {
-    // preen
-    if (rand.nextFloat() < swapHeadChance) {
-      facingFront = rand.nextBoolean();
-    }
-    
-    // may pause
-    if (rand.nextInt(100) > 0) {
-      assert direction != 0;
-      x += direction * speed;
-      if (speed != 0) {
-        legPose = (legPose + 1) % legImages.length;
-      } else {
-        legPose = 0;
+    if (life > 0) {
+      // preen
+      if (rand.nextFloat() < swapHeadChance) {
+        facingFront = rand.nextBoolean();
+      }
+      
+      // may pause
+      if (rand.nextInt(100) > 0) {
+        assert direction != 0;
+        x += direction * speed;
+        if (speed != 0) {
+          legPose = (legPose + 1) % legImages.length;
+        } else {
+          legPose = 0;
+        }
       }
     }
   }
   
+  float deathAnimationFunction(float progress)
+  {
+    return 22.5 * progress * progress - 14.5 * progress;
+  }
+  
   public void draw()
   {
+    colorMode(RGB, 255);
     blendMode(BLEND);
     PImage bodyImg = bodyImages[facingFront ? 0 : 1];
     PImage legsImg = legImages[this.legPose];
     
-    if (impactTime > 0) {
-      color c = impactTint;
-      byte alpha = (byte)(255 * (1 - (millis() - impactTime) / (float)kImpactDuration));
-      c = (c & 0xffffff) | (alpha << 24); 
-      tint(impactTint);
+    pushMatrix();
+    
+    int impactAlpha = 255;
+    if (dyingStart > 0) {
+      float impactProgress = (millis() - dyingStart) / (float)kDyingAnimationDuration;
+      impactAlpha = (int)(255 * (1 - impactProgress));
+      translate(0, deathAnimationFunction(impactProgress));
     }
     
-    pushMatrix();
+    if (impactTint != 0) {
+      tint(impactTint, impactAlpha);
+    } else {
+      noTint();
+    }
+    
     translate(x, 0, 0);
     scale(direction, 1, 1);
     if (direction == DirectionLeft) {
@@ -158,33 +181,36 @@ public class Flamingo {
     
     image(bodyImg, 0, 0);
     image(legsImg, 1, bodyImg.height);
+    
     popMatrix();
   }
   
   public boolean collidesWithBlobby(Blobby b)
   {
-    if (hasBeenImpacted() || b.isDead()) {
-      return false;
+    if (life > 0 && !b.isDead()) {
+      PVector pos = b.position;
+      if (pos.y > 0 && pos.y < displayHeight) {
+        float flamingoCenter = this.x + flamingoWidth / 2.0;
+        return pos.x > flamingoCenter - 2 && pos.x < flamingoCenter + 2;
+      }
     }
-    float px = b.position.x;
-    float flamingoCenter = this.x + flamingoWidth / 2.0;
-    return px > flamingoCenter - 1 && px < flamingoCenter + 1;
+    return false;
   }
   
   public void impactWithBlobby(Blobby b)
   {
-    impactTime = millis();
+    println("Flamingo " + this + " hit by blobby " + b);
+    assert life > 0;
+    life -= 1;
     impactTint = b.blobbyColor;
+    if (life == 0) {
+      dyingStart = millis();
+    }
     b.impact();
-  }
-  
-  public boolean hasBeenImpacted()
-  {
-    return impactTime > 0;
   }
 }
 
-// ------------------------------------------------------- //
+// -------------------------------------------------------------------------------------------- //
 
 public class FlamingoPattern extends IdlePattern
 {
@@ -201,6 +227,8 @@ public class FlamingoPattern extends IdlePattern
   boolean directionIsRandom;
   
   float spawnChance; // [0, 1] chance of adding a flamingo on tick
+  float spawnRate; // flamingos per second (fps)
+  int lastSpawnFromSpawnRate;
   
   int lastTick;
   int direction;
@@ -252,6 +280,10 @@ public class FlamingoPattern extends IdlePattern
     directionIsRandom = false;
     
     switch(mode) {
+      case Test:
+        spawnRate = 2.5;
+        directionIsRandom = true;
+        break;
       case WhereAmI:
         Flamingo f = spawnFlamingo(direction);
         f.swapHeadChance = 0;
@@ -277,14 +309,26 @@ public class FlamingoPattern extends IdlePattern
   {
     direction = randomDirection();
     
-    startMode(randomEnum(FlamingoMode.class));
+    //startMode(FlamingoMode.Test);
+    
+    FlamingoMode m;
+    do {
+      m = randomEnum(FlamingoMode.class);
+    } while (m == FlamingoMode.Test);
+    startMode(m);
     
     super.startPattern();
   }
   
   private void updateMode(int tickMillis)
   {
+    if (directionIsRandom) {
+      direction = randomDirection();
+    }
+    
     switch(mode) {
+      case Test:
+        break;
       case WhereAmI: {
         if (flamingos.size() > 0) {
           Flamingo f = flamingos.getFirst();
@@ -314,9 +358,6 @@ public class FlamingoPattern extends IdlePattern
         break;
       }
       case Parade:
-        if (directionIsRandom) {
-          direction = randomDirection();
-        }
         int paradeElapsed = millis() - modeStart;
         if (paradeElapsed < paradeDuration * 1000) {
           spawnChance = 0.5 * (1 + sin(paradeElapsed / (float)paradeDuration * 3.14159));
@@ -336,8 +377,13 @@ public class FlamingoPattern extends IdlePattern
     if (tickMillis > frametime) {
       lastTick = millis();
       
-      if (!this.isStopping() && rand.nextFloat() < this.spawnChance) {
+      boolean spawnAllowed = (mode == FlamingoMode.Test || !this.isStopping());
+      if (spawnAllowed && rand.nextFloat() < this.spawnChance) {
         spawnFlamingo(direction);
+      }
+      if (spawnAllowed && millis() - lastSpawnFromSpawnRate > 1/spawnRate * 1000) {
+        spawnFlamingo(direction);
+        lastSpawnFromSpawnRate = millis();
       }
       
       Iterator<Flamingo> it = flamingos.iterator();
@@ -347,7 +393,7 @@ public class FlamingoPattern extends IdlePattern
         if (flamingo.x + flamingoWidth > displayWidth + 20 || flamingo.x < -20) {
           it.remove();
         }
-        if (millis() - flamingo.impactTime > kFlamingoImpactDuration) {
+        if (flamingo.isDead()) {
           it.remove();
         }
       }
@@ -359,7 +405,7 @@ public class FlamingoPattern extends IdlePattern
       flamingo.draw();
     }
     
-    if (flamingos.size() == 0) {
+    if (flamingos.size() == 0 && mode != FlamingoMode.Test) {
       if (this.isStopping()) {
         this.stopCompleted();
       } else {

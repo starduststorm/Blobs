@@ -93,6 +93,13 @@ public class Blob implements GestureDelegate
     return (y - height / 2.0) * 1.5 + height / 2.0 + 1;
   }
   
+  boolean armed()
+  {
+    // you must be at least 1 second old to own a firearm (pending NRA lawsuit to lower it to time of conception)
+    // this cuts down on explosions due to sensor noise when a blob first enters the frame.
+    return (millis() - birthdate > 2000);
+  }
+  
   public void updateWithSkeleton(KSkeleton skeleton)
   {
     gestureRecognizer.updateWithSkeleton(skeleton);
@@ -270,6 +277,9 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
   
   private void _shootBlobbyLike(float y, float initialdx, BlobbyType blobbyType)
   {
+    if (!armed()) {
+      return;
+    }
     int index = _indexOfOutermostSubBlob(initialdx < 0);
     if (index != -1) {
       color outerColor = blobColors[index];
@@ -295,6 +305,9 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
   
   private void shootSplody(float initialdx)
   {
+    if (!armed()) {
+      return;
+    }
     int index = _indexOfOutermostSubBlob(initialdx < 0);
     if (index != -1) {
       for (int i = 0; i < 20; ++i) {
