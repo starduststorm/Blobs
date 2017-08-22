@@ -202,7 +202,7 @@ void draw()
   }
   
   // time out idle patterns after some minutes
-  final int kIdlePatternTimeout = 1000 * 60 * 2;
+  final int kIdlePatternTimeout = 1000 * 60 * 5;
   if (activeIdlePattern != null && activeIdlePattern.isRunning() && millis() - activeIdlePattern.startMillis > kIdlePatternTimeout) {
     if (activeIdlePattern.wantsToIdleStop()) {
       activeIdlePattern.lazyStop();

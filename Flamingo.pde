@@ -2,6 +2,7 @@
 public enum FlamingoMode {
   WhereAmI,
   Parade,
+  Mess,
   Test,
 };
 
@@ -222,8 +223,8 @@ public class FlamingoPattern extends IdlePattern
   int submodeStart;
   int lastAction;
   
-  int paradeDuration; // seconds
-  float paradePeak; // peak chance to spawn
+  int spawnDuration; // seconds
+  float messPeak; // peak chance to spawn during Mess
   boolean directionIsRandom;
   
   float spawnChance; // [0, 1] chance of adding a flamingo on tick
@@ -232,7 +233,6 @@ public class FlamingoPattern extends IdlePattern
   
   int lastTick;
   int direction;
-  final int justhowdamnbigtheparadeis = 20;
   
   public String toString()
   {
@@ -277,6 +277,8 @@ public class FlamingoPattern extends IdlePattern
     modeStart = millis();
     enterSubmode(0);
     spawnChance = 0.0;
+    spawnRate = 0.0;
+    spawnDuration = 0;
     directionIsRandom = false;
     
     switch(mode) {
@@ -289,8 +291,12 @@ public class FlamingoPattern extends IdlePattern
         f.swapHeadChance = 0;
         break;
       case Parade:
-        paradeDuration = 25;
-        paradePeak = 0.1;
+        spawnRate = 5;
+        spawnDuration = 4;
+        break;
+      case Mess:
+        spawnDuration = 25;
+        messPeak = 0.1;
         if (rand.nextFloat() < 0.3) {
           directionIsRandom = true;
         }
@@ -308,13 +314,14 @@ public class FlamingoPattern extends IdlePattern
   public void startPattern()
   {
     direction = randomDirection();
-    
-    //startMode(FlamingoMode.Test);
-    
+     
     FlamingoMode m;
     do {
       m = randomEnum(FlamingoMode.class);
     } while (m == FlamingoMode.Test);
+    
+    //m = FlamingoMode.Test;
+    
     startMode(m);
     
     super.startPattern();
@@ -324,6 +331,16 @@ public class FlamingoPattern extends IdlePattern
   {
     if (directionIsRandom) {
       direction = randomDirection();
+    }
+    
+    boolean keepSpawning = true;
+    int spawnElapsed = millis() - modeStart;
+    if (spawnDuration > 0) {
+      if (spawnElapsed > spawnDuration * 1000) {
+        spawnChance = 0;
+        spawnRate = 0;
+        keepSpawning = false;
+      }
     }
     
     switch(mode) {
@@ -357,14 +374,13 @@ public class FlamingoPattern extends IdlePattern
         }
         break;
       }
-      case Parade:
-        int paradeElapsed = millis() - modeStart;
-        if (paradeElapsed < paradeDuration * 1000) {
-          spawnChance = 0.5 * (1 + sin(paradeElapsed / (float)paradeDuration * 3.14159));
-          spawnChance *= paradePeak; // max density chance one flamingo ever 4 pixels
-        } else {
-          spawnChance = 0;
+      case Mess:
+        if (keepSpawning) {
+          spawnChance = 0.5 * (1 + sin(spawnElapsed / (float)spawnDuration * 3.14159));
+          spawnChance *= messPeak; // max density chance one flamingo ever 4 pixels
         }
+        break;
+      default:
         break;
     }
   }
@@ -413,8 +429,8 @@ public class FlamingoPattern extends IdlePattern
           // 40% chance of getting chased by a parade
           startMode(FlamingoMode.Parade);
           // but denser
-          paradeDuration = 15;
-          paradePeak = 0.18;
+          spawnDuration = 15;
+          messPeak = 0.18;
         } else if (isRunning() && millis() - modeStart > 5000) {
           // no flamingos and we've been running for more than 5 seconds as a sanity check 
           lazyStop();
