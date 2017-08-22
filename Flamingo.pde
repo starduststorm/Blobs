@@ -7,6 +7,8 @@ public enum FlamingoMode {
 final int DirectionLeft = -1;
 final int DirectionRight = 1;
 
+final int kImpactDuration = 1 * 1000;
+
 public static <T extends Enum<?>> T randomEnum(Class<T> C)
 {
   Random random = new Random();
@@ -94,13 +96,16 @@ private PImage[] imagesForData(String[][] data, color[] colors)
 
 // ------------------------------------------------------- //
 
-private class Flamingo {
+public class Flamingo {
   int x;
   boolean facingFront;
   int legPose;
   int direction; // 1 or -1
   int speed; // pixels / tick at the moment
   float swapHeadChance;
+  
+  int impactTime;
+  color impactTint;
   
   public Flamingo(int d)
   {
@@ -136,7 +141,13 @@ private class Flamingo {
     blendMode(BLEND);
     PImage bodyImg = bodyImages[facingFront ? 0 : 1];
     PImage legsImg = legImages[this.legPose];
-    //tint(100, 50);
+    
+    if (impactTime > 0) {
+      color c = impactTint;
+      byte alpha = (byte)(255 * (1 - (millis() - impactTime) / (float)kImpactDuration));
+      c = (c & 0xffffff) | (alpha << 24); 
+      tint(impactTint);
+    }
     
     pushMatrix();
     translate(x, 0, 0);
@@ -148,6 +159,28 @@ private class Flamingo {
     image(bodyImg, 0, 0);
     image(legsImg, 1, bodyImg.height);
     popMatrix();
+  }
+  
+  public boolean collidesWithBlobby(Blobby b)
+  {
+    if (hasBeenImpacted() || b.isDead()) {
+      return false;
+    }
+    float px = b.position.x;
+    float flamingoCenter = this.x + flamingoWidth / 2.0;
+    return px > flamingoCenter - 1 && px < flamingoCenter + 1;
+  }
+  
+  public void impactWithBlobby(Blobby b)
+  {
+    impactTime = millis();
+    impactTint = b.blobbyColor;
+    b.impact();
+  }
+  
+  public boolean hasBeenImpacted()
+  {
+    return impactTime > 0;
   }
 }
 
@@ -312,6 +345,9 @@ public class FlamingoPattern extends IdlePattern
         Flamingo flamingo = it.next();
         flamingo.tick();
         if (flamingo.x + flamingoWidth > displayWidth + 20 || flamingo.x < -20) {
+          it.remove();
+        }
+        if (millis() - flamingo.impactTime > kFlamingoImpactDuration) {
           it.remove();
         }
       }

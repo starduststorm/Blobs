@@ -242,6 +242,18 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     }
   }
   
+  void checkCollisionWithFlamingos(LinkedList<Flamingo> flamingos)
+  {
+    for (Flamingo f : flamingos) {
+      for (Blobby b : blobbies) {
+        if (f.collidesWithBlobby(b)) {
+          f.impactWithBlobby(b);
+          break;
+        }
+      }
+    }
+  }
+  
   private int _indexOfOutermostSubBlob(boolean left)
   {
     int index = -1;

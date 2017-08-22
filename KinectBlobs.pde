@@ -79,7 +79,10 @@ void setup()
   idlePatterns = new ArrayList<IdlePattern>();
   //idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
-  idlePatterns.add(new FlamingoPattern(displayWidth, displayHeight));
+  FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
+  idlePatterns.add(flamingoPattern);
+  
+  blobManager.flamingoPattern = flamingoPattern;
 }
 
 void draw()

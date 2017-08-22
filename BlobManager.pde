@@ -11,6 +11,8 @@ public class BlobManager
   KinectPV2 kinect;
   HashSet<Blob> blobs;
   
+  FlamingoPattern flamingoPattern;
+  
   public BlobManager(KinectPV2 kinect)
   {
     this.kinect = kinect;
@@ -86,6 +88,8 @@ public class BlobManager
       if (timeSince > 0 && timeSince < kBlobDisappearThreshold) {
         blob.coast();
       }
+      
+      blob.checkCollisionWithFlamingos(flamingoPattern.flamingos);
       
       // Remove blobs that are very awol
       if (timeSince > kBlobExpireThreshold) {

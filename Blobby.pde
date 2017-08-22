@@ -8,6 +8,7 @@ public class Blobby
   PVector position;
   PVector velocity;
   BlobbyType type;
+  boolean impacted;
   
   public Blobby(PVector start, PVector velocity, color c, BlobbyType type)
   {
@@ -27,8 +28,18 @@ public class Blobby
     }
   }
   
+  public void impact()
+  {
+    // we hit something
+    impacted = true;
+  }
+  
   public boolean isDead()
   {
+    if (impacted) {
+      return true;
+    }
+    
     switch (type) {
       case Liney:
       case Splody:
@@ -41,6 +52,10 @@ public class Blobby
   
   public void draw()
   {
+    if (impacted) {
+      return;
+    }
+    
     blendMode(BLEND);
     colorMode(RGB, 100);
     color c = this.blobbyColor;
