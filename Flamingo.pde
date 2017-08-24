@@ -3,6 +3,7 @@ public enum FlamingoMode {
   WhereAmI,
   Parade,
   Mess,
+  War,
   Test,
 };
 
@@ -110,13 +111,13 @@ public class Flamingo {
   int dyingStart;
   color impactTint;
   
-  public Flamingo(int d)
+  public Flamingo(int startDirection, int startLife)
   {
     speed = 1;
-    direction = d;
+    direction = startDirection;
     facingFront = true;
     swapHeadChance = 0.1;
-    life = 2;
+    life = startLife;
     
     legPose = rand.nextInt(legImages.length);
   }
@@ -222,6 +223,7 @@ public class FlamingoPattern extends IdlePattern
   int submode;
   int submodeStart;
   int lastAction;
+  int deathToll;
   
   int spawnDuration; // seconds
   float messPeak; // peak chance to spawn during Mess
@@ -261,7 +263,8 @@ public class FlamingoPattern extends IdlePattern
   
   Flamingo spawnFlamingo(int direction)
   {
-    Flamingo f = new Flamingo(direction);
+    int startLife = 2;
+    Flamingo f = new Flamingo(direction, startLife);
     if (direction > 0) {
       f.x = -flamingoWidth;
     } else {
@@ -273,6 +276,10 @@ public class FlamingoPattern extends IdlePattern
   
   void startMode(FlamingoMode m)
   {
+    if (mode == m) {
+      println("Already in mode " + m + "!");
+      return;
+    }
     mode = m;
     modeStart = millis();
     enterSubmode(0);
@@ -291,7 +298,7 @@ public class FlamingoPattern extends IdlePattern
         f.swapHeadChance = 0;
         break;
       case Parade:
-        spawnRate = 5;
+        spawnRate = 4;
         spawnDuration = 4;
         break;
       case Mess:
@@ -301,6 +308,10 @@ public class FlamingoPattern extends IdlePattern
           directionIsRandom = true;
         }
         break;
+      case War:
+        spawnDuration = 20;
+        messPeak = 0.22;
+        break;
     }
   }
   
@@ -309,18 +320,24 @@ public class FlamingoPattern extends IdlePattern
     return (rand.nextBoolean() ? DirectionRight : DirectionLeft);
   }
   
+  boolean warIsOngoing()
+  {
+    return mode == FlamingoMode.War && isInteracting();
+  }
+  
   // ----------------------- Public methods ---------------------- //
   
   public void startPattern()
   {
     direction = randomDirection();
+    deathToll = 0;
      
     FlamingoMode m;
     do {
       m = randomEnum(FlamingoMode.class);
-    } while (m == FlamingoMode.Test);
+    } while (m == FlamingoMode.Test || m == FlamingoMode.War);
     
-    //m = FlamingoMode.Test;
+    m = FlamingoMode.Mess;
     
     startMode(m);
     
@@ -337,9 +354,14 @@ public class FlamingoPattern extends IdlePattern
     int spawnElapsed = millis() - modeStart;
     if (spawnDuration > 0) {
       if (spawnElapsed > spawnDuration * 1000) {
-        spawnChance = 0;
-        spawnRate = 0;
-        keepSpawning = false;
+        if (warIsOngoing()) {
+          // change sides, or from both sides!
+          directionIsRandom = !directionIsRandom;
+        } else {
+          spawnChance = 0;
+          spawnRate = 0;
+          keepSpawning = false;
+        }
       }
     }
     
@@ -374,6 +396,7 @@ public class FlamingoPattern extends IdlePattern
         }
         break;
       }
+      case War:
       case Mess:
         if (keepSpawning) {
           spawnChance = 0.5 * (1 + sin(spawnElapsed / (float)spawnDuration * 3.14159));
@@ -411,6 +434,11 @@ public class FlamingoPattern extends IdlePattern
         }
         if (flamingo.isDead()) {
           it.remove();
+          deathToll++;
+          if (deathToll > 2 && mode != FlamingoMode.War) {
+            // Of course you realize this means war.
+            startMode(FlamingoMode.War);
+          }
         }
       }
       
@@ -426,17 +454,20 @@ public class FlamingoPattern extends IdlePattern
         this.stopCompleted();
       } else {
         if (mode == FlamingoMode.WhereAmI && isRunning() && rand.nextFloat() < 0.3) {
-          // 40% chance of getting chased by a parade
+          // 30% chance of getting chased by a parade
           startMode(FlamingoMode.Parade);
-          // but denser
-          spawnDuration = 15;
-          messPeak = 0.18;
-        } else if (isRunning() && millis() - modeStart > 5000) {
+        } else if (isRunning() && millis() - modeStart > 5000 && !warIsOngoing()) {
           // no flamingos and we've been running for more than 5 seconds as a sanity check 
+          println("Stopping flamingos because we've run out of flamingos");
           lazyStop();
         }
       }
     }
+  }
+  
+  boolean wantsInteraction()
+  {
+    return flamingos.size() > 0;
   }
   
   boolean wantsToIdleStop()

@@ -162,14 +162,20 @@ void draw()
   copy(blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight, 0, 0, displayWidth, displayHeight);
      
   if (blobManager.hasBlobs()) {
-    if (millis() - timeBlobsLastSeen > 100) {
-      timeBlobsFirstSeen = millis();
+    if (currentMillis - timeBlobsLastSeen > 100) {
+      timeBlobsFirstSeen = currentMillis;
     }
-    timeBlobsLastSeen = millis();
+    timeBlobsLastSeen = currentMillis;
   }
   
   // Start patterns a second after we stop tracking someone
   if (currentMillis - timeBlobsLastSeen > 1000) {
+    for (IdlePattern pattern : idlePatterns) {
+      if (pattern.isRunning()) {
+        pattern.stopInteraction();
+      }
+    }
+    
     if (activeIdlePattern == null) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
@@ -185,11 +191,18 @@ void draw()
   
   // Update or stop patterns
   for (IdlePattern pattern : idlePatterns) {
-    if (blobManager.hasBlobs() && pattern.isRunning()) {
-      pattern.lazyStop();
+    if (blobManager.hasBlobs() && pattern.isRunning() && !pattern.isInteracting()) {
+      if (pattern.wantsInteraction()) {
+        pattern.startInteraction();
+      } else {
+        println("Idle stopping pattern due to blobs...");
+        pattern.lazyStop();
+      }
       activeIdlePattern = null;
       // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter
-    } else if (pattern.isRunning() || pattern.isStopping()) {
+    }
+    
+    if (pattern.isRunning() || pattern.isStopping()) {
       pattern.update();
     } else {
       pattern.idleUpdate();

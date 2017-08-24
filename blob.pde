@@ -97,7 +97,7 @@ public class Blob implements GestureDelegate
   {
     // you must be at least 1 second old to own a firearm (pending NRA lawsuit to lower it to time of conception)
     // this cuts down on explosions due to sensor noise when a blob first enters the frame.
-    return (millis() - birthdate > 2000);
+    return (millis() - birthdate > 1000);
   }
   
   public void updateWithSkeleton(KSkeleton skeleton)

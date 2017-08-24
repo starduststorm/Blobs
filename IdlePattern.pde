@@ -5,6 +5,7 @@ public abstract class IdlePattern
   
   protected int startMillis = -1;
   protected int stopMillis = -1;
+  protected int startInteractionMillis = -1;
   
   public IdlePattern(int displayWidth, int displayHeight)
   {
@@ -29,6 +30,45 @@ public abstract class IdlePattern
     return true;
   }
   
+  public boolean wantsInteraction()
+  {
+    return false;
+  }
+  
+  public final void startInteraction()
+  {
+    if (this.isRunning() && !this.isInteracting()) {
+      println("Starting interaction with " + this + "...");
+      assert wantsInteraction();
+      this.startInteractionMillis = millis();
+      interactionStarted();
+    }
+  }
+  
+  public final void stopInteraction()
+  {
+    if (this.startInteractionMillis != -1) {
+      println("Starting interaction with " + this + "...");
+      this.startInteractionMillis = -1;
+      this.interactionStopped();
+    }
+  }
+  
+  public final boolean isInteracting()
+  {
+    return this.startInteractionMillis != -1;
+  }
+  
+  public void interactionStarted()
+  {
+    // override point
+  }
+  
+  public void interactionStopped()
+  {
+    // override point
+  }
+  
   public void lazyStop()
   {
     if (this.isRunning()) {
@@ -42,6 +82,7 @@ public abstract class IdlePattern
   public final void stopCompleted()
   {
     println("Stopped " + this + ".");
+    this.stopInteraction();
     this.stopMillis = -1;
     this.startMillis = -1;
   }
