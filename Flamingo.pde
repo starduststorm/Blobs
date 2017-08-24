@@ -276,10 +276,6 @@ public class FlamingoPattern extends IdlePattern
   
   void startMode(FlamingoMode m)
   {
-    if (mode == m) {
-      println("Already in mode " + m + "!");
-      return;
-    }
     mode = m;
     modeStart = millis();
     enterSubmode(0);
@@ -337,7 +333,7 @@ public class FlamingoPattern extends IdlePattern
       m = randomEnum(FlamingoMode.class);
     } while (m == FlamingoMode.Test || m == FlamingoMode.War);
     
-    m = FlamingoMode.Mess;
+    //m = FlamingoMode.Mess;
     
     startMode(m);
     
