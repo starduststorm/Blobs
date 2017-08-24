@@ -48,7 +48,7 @@ public abstract class IdlePattern
   public final void stopInteraction()
   {
     if (this.startInteractionMillis != -1) {
-      println("Starting interaction with " + this + "...");
+      println("Stopping interaction with " + this + "...");
       this.startInteractionMillis = -1;
       this.interactionStopped();
     }

@@ -196,10 +196,10 @@ void draw()
         pattern.startInteraction();
       } else {
         println("Idle stopping pattern due to blobs...");
+        // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter
+        activeIdlePattern = null;
         pattern.lazyStop();
       }
-      activeIdlePattern = null;
-      // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter
     }
     
     if (pattern.isRunning() || pattern.isStopping()) {
