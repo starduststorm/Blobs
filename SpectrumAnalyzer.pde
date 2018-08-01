@@ -46,7 +46,7 @@ public class SpectrumAnalyzer extends IdlePattern
   public boolean wantsToRun()
   {
     this.idleUpdate();
-    return volumeRunningAverage > kVolumeThreshold;
+    return volumeRunningAverage > 1.3 * kVolumeThreshold;
   }
   
   public boolean wantsToIdleStop()
@@ -56,7 +56,6 @@ public class SpectrumAnalyzer extends IdlePattern
   
   public void update()
   {
-    this.idleUpdate();
     if (volumeRunningAverage < kVolumeThreshold) {
       if (this.isRunning()) {
         this.lazyStop();
@@ -67,6 +66,9 @@ public class SpectrumAnalyzer extends IdlePattern
   
   void draw()
   {
+    blendMode(BLEND);
+    colorMode(HSB, 100);
+    
     float startStopAlpha = 1.0;
     float volumeAlpha = 1;
     
@@ -84,9 +86,6 @@ public class SpectrumAnalyzer extends IdlePattern
     } else if (millis() - startMillis < 2000) {
       startStopAlpha = min(1.0, (millis() - startMillis) / 2000.0);
     }
-    
-    blendMode(BLEND);
-    colorMode(HSB, 100);
     
     float prevAmp = -1;
     float waveformAlpha = 0.5 * volumeAlpha * startStopAlpha;
@@ -108,15 +107,13 @@ public class SpectrumAnalyzer extends IdlePattern
         int rangeLen = 30;
         float hue = (i + millis() / 200.0 + rangeMin) % ((rangeMin + rangeLen) * 2);
         hue = (hue > (rangeMin + rangeLen) ? (rangeMin + rangeLen)*2 - hue : hue);
-        //float hue = (amp * 6 + millis() / 100.0);
         stroke(hue % 100, 100, 100, 100 * waveformAlpha);
-
+        
         line(displayWidth / 2.0 + stretch * i - stretch, prevAmp, displayWidth / 2.0 + stretch * i, amp);
-        line(displayWidth / 2.0 - stretch * i + stretch, prevAmp, displayWidth / 2.0 - stretch* i, amp);
+        line(displayWidth / 2.0 - stretch * i + stretch, prevAmp, displayWidth / 2.0 - stretch * i, amp);
       }
       
       prevAmp = amp;
     }
   }
-  
 }

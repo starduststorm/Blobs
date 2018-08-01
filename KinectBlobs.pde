@@ -21,6 +21,8 @@ ArrayList<IdlePattern> idlePatterns;
 IdlePattern activeIdlePattern = null;
 IdlePattern lastIdlePattern = null;
 
+SpectrumAnalyzer spectrum = null;
+
 boolean first = true;
 
 int timeBlobsLastSeen = -1;
@@ -58,7 +60,7 @@ void setup()
   registry.setLogging(false);
   testObserver = new TestObserver();
   registry.addObserver(testObserver);
- 
+
  if (useKinect) {
    // Init Kinect
     kinect = new KinectPV2(this);   
@@ -81,6 +83,8 @@ void setup()
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
   FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
   idlePatterns.add(flamingoPattern);
+  
+  spectrum = new SpectrumAnalyzer(displayWidth, displayHeight, this);
   
   blobManager.flamingoPattern = flamingoPattern;
 }
@@ -155,6 +159,7 @@ void draw()
   if (useKinect) {
     blobManager.update();
   }
+  
   translate(-blobsOriginX, -blobsOriginY);
   
   // Copy blobs pixels into the display
@@ -168,6 +173,16 @@ void draw()
     timeBlobsLastSeen = currentMillis;
   }
   
+  boolean useSpectrum = spectrum.wantsToRun();
+  if (useSpectrum && !spectrum.isRunning() && !spectrum.isStopping()) {
+    activeIdlePattern.lazyStop();
+    activeIdlePattern = null;
+    spectrum.startPattern();
+  }
+  if (spectrum.isRunning() || spectrum.isStopping()) {
+    spectrum.update();
+  }
+  
   // Start patterns a second after we stop tracking someone
   if (currentMillis - timeBlobsLastSeen > 1000) {
     for (IdlePattern pattern : idlePatterns) {
@@ -176,7 +191,7 @@ void draw()
       }
     }
     
-    if (activeIdlePattern == null) {
+    if (activeIdlePattern == null && !useSpectrum) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
       if (idlePattern != lastIdlePattern && !idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
@@ -215,7 +230,7 @@ void draw()
   }
   
   // time out idle patterns after some minutes
-  final int kIdlePatternTimeout = 1000 * 60 * 5;
+  final int kIdlePatternTimeout = 1000 * 60 * 3;
   if (activeIdlePattern != null && activeIdlePattern.isRunning() && millis() - activeIdlePattern.startMillis > kIdlePatternTimeout) {
     if (activeIdlePattern.wantsToIdleStop()) {
       activeIdlePattern.lazyStop();
@@ -223,11 +238,13 @@ void draw()
     }
   }
   
+  
   renderRegionToStrand(0, 0, displayWidth, displayHeight);
 }
 
 public void renderRegionToStrand(int regionStartX, int regionStartY, int regionWidth, int regionHeight)
 {
+  colorMode(RGB, 100);
   List<Strip> strips = registry.getStrips();
   int x=0;
   int y=0;
