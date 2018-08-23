@@ -5,6 +5,7 @@ public enum FlamingoMode {
   Mess,
   War,
   Test,
+  Nyan,
 };
 
 final int DirectionLeft = -1;
@@ -100,11 +101,11 @@ private PImage[] imagesForData(String[][] data, color[] colors)
 // ------------------------------------------------------- //
 
 public class Flamingo {
-  int x;
+  float x;
   boolean facingFront;
   int legPose;
   int direction; // 1 or -1
-  int speed; // pixels / tick at the moment
+  float speed; // pixels / tick at the moment
   float swapHeadChance;
   
   int life;
@@ -175,7 +176,7 @@ public class Flamingo {
       noTint();
     }
     
-    translate(x, 0, 0);
+    translate((int)x, 0, 0);
     scale(direction, 1, 1);
     if (direction == DirectionLeft) {
       translate(-flamingoWidth, 0, 0);
@@ -289,10 +290,11 @@ public class FlamingoPattern extends IdlePattern
         spawnRate = 2.5;
         directionIsRandom = true;
         break;
-      case WhereAmI:
+      case WhereAmI: {
         Flamingo f = spawnFlamingo(direction);
         f.swapHeadChance = 0;
         break;
+      }
       case Parade:
         spawnRate = 4;
         spawnDuration = 4;
@@ -308,6 +310,14 @@ public class FlamingoPattern extends IdlePattern
         spawnDuration = 20;
         messPeak = 0.22;
         break;
+      case Nyan: {
+        Flamingo f = spawnFlamingo(direction);
+        f.swapHeadChance = 0;
+        f.speed = 0.5;
+        
+        bursts = new LinkedList<NyanBurst>();
+        break;
+      }
     }
   }
   
@@ -333,7 +343,7 @@ public class FlamingoPattern extends IdlePattern
       m = randomEnum(FlamingoMode.class);
     } while (m == FlamingoMode.Test || m == FlamingoMode.War);
     
-    //m = FlamingoMode.Mess;
+    //m = FlamingoMode.Nyan;
     
     startMode(m);
     
@@ -425,7 +435,10 @@ public class FlamingoPattern extends IdlePattern
       while (it.hasNext()) {
         Flamingo flamingo = it.next();
         flamingo.tick();
-        if (flamingo.x + flamingoWidth > displayWidth + 20 || flamingo.x < -20) {
+        int nyanAddition = (mode == FlamingoMode.Nyan ? nyanWaveLength : 0);
+        if (flamingo.x + flamingoWidth > displayWidth + 20 + nyanAddition || flamingo.x < -20 - nyanAddition) {
+          if (mode != FlamingoMode.Nyan) {
+          }
           it.remove();
         }
         if (flamingo.isDead()) {
@@ -443,6 +456,10 @@ public class FlamingoPattern extends IdlePattern
     
     for (Flamingo flamingo : flamingos) {
       flamingo.draw();
+      
+      if (mode == FlamingoMode.Nyan) {
+        drawRainbowTail(flamingo);
+      }
     }
     
     if (flamingos.size() == 0 && mode != FlamingoMode.Test) {
@@ -469,5 +486,121 @@ public class FlamingoPattern extends IdlePattern
   boolean wantsToIdleStop()
   {
     return false;
+  }
+  
+  private LinkedList<NyanBurst> bursts;
+  private int nyanWaveLength = 45; // 15 * 3
+  
+  void drawRainbowTail(Flamingo f) {
+    noFill();
+    colorMode(HSB, 100);
+    
+    pushMatrix();
+    
+    translate(f.x, 0, 0);
+    scale(direction, 1, 1);
+    if (direction == DirectionLeft) {
+      translate(-flamingoWidth, 0, 0);
+    }
+    
+    int waveLength = 15;
+    for (int wave = 0; wave < waveLength; ++wave) {
+      int segs = displayHeight - 1;
+      for (int i = 0; i < segs; ++i) {
+        stroke((i * 100 / segs) % 100, 100, 50, 100 - 100 * wave / (float)waveLength);
+        int x = -3 * wave;
+        int y = i + 1 + (int)(f.x/2.0 + wave) % 2;
+        line(x, y, x - 3, y);
+      }
+    }
+    
+    Iterator<NyanBurst> it = bursts.iterator();
+    while (it.hasNext()) {
+      NyanBurst b = it.next();
+      b.tick();
+      if (b.isDone()) {
+        it.remove();
+      }
+    }
+    if (f.x % 2 == 0) {
+      bursts.addLast(new NyanBurst());
+    }
+    for (NyanBurst b : bursts) {
+      b.draw();
+    }
+   
+    popMatrix();
+  }
+}
+
+class NyanBurst {
+  float x;
+  int y;
+  float progress;
+  int state;
+  
+  NyanBurst() {
+    x = flamingoWidth + rand.nextInt() % 20 - 10 + 20;
+    y = rand.nextInt() % displayHeight;
+  }
+  
+  void tick() {
+    progress += 1;
+    state = (int)progress / 8;
+    x -= 0.5;
+  }
+  
+  boolean isDone() {
+    return state > 3;
+  }
+  
+  void draw() {
+    pushMatrix();
+    translate((int)x, y, 0);
+    colorMode(RGB, 100);
+    blendMode(ADD);
+    stroke(100, 100, 100);
+    
+    switch (state) {
+      case 0:
+        point(0, 0);
+        break;
+      case 1:
+        point(0, 1);
+        point(1, 0);
+        point(0, -1);
+        point(-1, 0);
+        break;
+      case 2:
+        stroke(100, 100, 100, 50);
+        //point(0, 0);
+        point(0, 2);
+        point(1, 1);
+        point(2, 0);
+        point(-1, 1);
+        point(0, -2);
+        point(-1, -1);
+        point(-2, 0);
+        point(1, -1);
+        break;
+      case 3:
+        stroke(100, 100, 100, 20);
+        //point(0, 1);
+        //point(1, 0);
+        //point(0, -1);
+        //point(-1, 0);
+        
+        point(0, 3);
+        point(2, 2);
+        point(3, 0);
+        point(-2, 2);
+        point(0, -3);
+        point(-2, -2);
+        point(-3, 0);
+        point(2, -2);
+
+        break;
+    }
+    popMatrix();
   }
 }
