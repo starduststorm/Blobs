@@ -9,6 +9,8 @@ import java.util.*;
 final boolean useKinect = true;
 import KinectPV2.*;
 
+final boolean useSpectrum = false;
+
 DeviceRegistry registry;
 TestObserver testObserver;
 
@@ -79,8 +81,9 @@ void setup()
   textSize(8);
   
   idlePatterns = new ArrayList<IdlePattern>();
-  //idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
+  idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
+  //idlePatterns.add(new RainbowPattern(displayWidth, displayHeight));
   FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
   idlePatterns.add(flamingoPattern);
   
@@ -173,10 +176,12 @@ void draw()
     timeBlobsLastSeen = currentMillis;
   }
   
-  boolean useSpectrum = spectrum.wantsToRun();
-  if (useSpectrum && !spectrum.isRunning() && !spectrum.isStopping()) {
-    activeIdlePattern.lazyStop();
-    activeIdlePattern = null;
+  boolean runSpectrum = useSpectrum && spectrum.wantsToRun();
+  if (runSpectrum && !spectrum.isRunning() && !spectrum.isStopping()) {
+    if (activeIdlePattern != null) {
+      activeIdlePattern.lazyStop();
+      activeIdlePattern = null;
+    }
     spectrum.startPattern();
   }
   if (spectrum.isRunning() || spectrum.isStopping()) {
