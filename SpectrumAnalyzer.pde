@@ -3,9 +3,11 @@ import processing.sound.*;
 public class SpectrumAnalyzer extends IdlePattern
 {
   FFT fft;
-  AudioIn audioIn;
+  AudioIn fftAudioIn;
+  AudioIn amplitudeAudioIn;
+  Amplitude amplitude;
   
-  final int kAudioBands = 64;
+  final int kAudioBands = 128;
   
   float[] audioSpectrum = new float[kAudioBands];
   float[] normalizedSpectrum = new float[kAudioBands];
@@ -14,13 +16,20 @@ public class SpectrumAnalyzer extends IdlePattern
   float volumeRunningAverage = 0;
   final int kVolumeFrameCount = 300; // how many frames to run the running average over
   
+  int variant;
+  
   public SpectrumAnalyzer(int displayWidth, int displayHeight, PApplet sketch)
   {
     super(displayWidth, displayHeight);
     fft = new FFT(sketch, kAudioBands);
-    audioIn = new AudioIn(sketch, 0);
-    audioIn.start();
-    fft.input(audioIn);
+    fftAudioIn = new AudioIn(sketch, 0);
+    fftAudioIn.start();
+    fft.input(fftAudioIn);
+    
+    amplitudeAudioIn = new AudioIn(sketch, 0);
+    amplitudeAudioIn.start();
+    amplitude = new Amplitude(sketch);
+    amplitude.input(amplitudeAudioIn);
   }
   
   public void idleUpdate()
@@ -30,7 +39,7 @@ public class SpectrumAnalyzer extends IdlePattern
     float volumePeak = 0;
     for (int i = 0; i < kAudioBands; ++i) {
       // amplify and balance across the banner
-      float moddedAudio = audioSpectrum[i] * blobsRegionHeight * 200 * (i / 8.0 + 4);
+      float moddedAudio = audioSpectrum[i] * blobsRegionHeight * 100 * (i / 8.0 + 4);
       
       final float normCount = 5.0;
       normalizedSpectrum[i] = (normalizedSpectrum[i] * (normCount - 1) + moddedAudio) / normCount;
@@ -54,6 +63,13 @@ public class SpectrumAnalyzer extends IdlePattern
     return volumeRunningAverage < 2 * kVolumeThreshold;
   }
   
+  public void startPattern()
+  {
+    super.startPattern();
+    variant = (int)random(3);
+    variant = 0; // new ones suck so far
+  }
+  
   public void update()
   {
     if (volumeRunningAverage < kVolumeThreshold) {
@@ -66,9 +82,6 @@ public class SpectrumAnalyzer extends IdlePattern
   
   void draw()
   {
-    blendMode(BLEND);
-    colorMode(HSB, 100);
-    
     float startStopAlpha = 1.0;
     float volumeAlpha = 1;
     
@@ -87,8 +100,54 @@ public class SpectrumAnalyzer extends IdlePattern
       startStopAlpha = min(1.0, (millis() - startMillis) / 2000.0);
     }
     
+    if (variant == 0) {
+      drawLineSpectrum(startStopAlpha * volumeAlpha);
+    } else if (variant == 1) {
+      drawCenterSpectrum(startStopAlpha * volumeAlpha);
+    } else {
+      drawScanner(startStopAlpha * volumeAlpha);
+    }
+  }
+  
+  void drawScanner(float alphaMultiplier)
+  {
+    blendMode(BLEND);
+    colorMode(HSB, 100);
+    
+    float lastY = 0;
+    for (int i = 0; i < displayWidth; ++i) {
+      float y = amplitude.analyze() * displayHeight * 1000;
+      if (y != lastY) {
+        println("y = " + y + ", last = " + lastY);
+      }
+      lastY = y;
+      float x = i;
+      stroke(i % 100, 100, 100);
+      point(x, y);
+    }
+  }
+  
+  void drawCenterSpectrum(float alphaMultiplier)
+  {
+    blendMode(BLEND);
+    colorMode(HSB, 100);
+    
+    for (int i = 0; i < kAudioBands; ++i) {
+      float y = i * displayHeight / (float)kAudioBands;
+      float amp = normalizedSpectrum[i] * displayWidth / 20.0;
+      stroke((i + millis() / 200) % 100, 100, 100, 100 * alphaMultiplier);
+      line(displayWidth / 2.0, y, displayWidth / 2.0 - amp, y);
+      line(displayWidth / 2.0 + 1, y, displayWidth / 2.0 + 1 + amp, y);
+    }
+  }
+  
+  void drawLineSpectrum(float alphaMultiplier)
+  {
+    blendMode(BLEND);
+    colorMode(HSB, 100);
+    
     float prevAmp = -1;
-    float waveformAlpha = 0.5 * volumeAlpha * startStopAlpha;
+    float waveformAlpha = 0.5 * alphaMultiplier;
     
     for (int i = 0; i < kAudioBands; ++i) {
       float amp = normalizedSpectrum[i];
