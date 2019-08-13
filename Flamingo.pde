@@ -252,7 +252,7 @@ public class Flamingo extends Target {
         facingFront = rand.nextBoolean();
       }
       
-      if (usePauses && rand.nextInt(100) > 0) {
+      if (!usePauses || rand.nextInt(100) > 0) {
         assert direction != 0;
         x += direction * speed;
         if (speed != 0) {
