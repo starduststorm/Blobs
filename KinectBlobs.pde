@@ -6,7 +6,7 @@ import com.heroicrobot.dropbit.devices.pixelpusher.PixelPusher;
 
 import java.util.*;
 
-final boolean useKinect = true;
+final boolean useKinect = false;
 import KinectPV2.*;
 
 final boolean useSpectrum = false;
@@ -81,13 +81,16 @@ void setup()
   textSize(8);
   
   idlePatterns = new ArrayList<IdlePattern>();
-  idlePatterns.add(new SpectrumAnalyzer(displayWidth, displayHeight, this));
+  
+  // FIXME: this is crashing on dev mac, 100% of the time now but 0% earlier. port leak or something?
+  //spectrum = new SpectrumAnalyzer(displayWidth, displayHeight, this);
+  //idlePatterns.add(spectrum);
+  
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
   //idlePatterns.add(new RainbowPattern(displayWidth, displayHeight));
   FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
   idlePatterns.add(flamingoPattern);
-  
-  spectrum = new SpectrumAnalyzer(displayWidth, displayHeight, this);
+  idlePatterns.add(new TextBanner(displayWidth, displayHeight));
   
   blobManager.flamingoPattern = flamingoPattern;
 }
@@ -96,16 +99,12 @@ void draw()
 {
   int currentMillis = millis();
   
-  if (!testObserver.hasStrips) {
-    return;
-  }
-  
+  // FIXME: move these to setup()?
   registry.startPushing();
   registry.setExtraDelay(0);
   registry.setAutoThrottle(true);
   registry.setAntiLog(true);    
-  List<Strip> strips = registry.getStrips();
- 
+  
   if (first) {
      background(0, 0, 0);
      first = false;
@@ -146,10 +145,6 @@ void draw()
   //image(bodyImage, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
   //pg.endDraw();
   //image(pg, blobsXOffset, blobsYOffset, blobsRegionWidth, blobsRegionHeight);
-     
-  int numStrips = strips.size();
-  if (numStrips == 0)
-    return;
   
   // Fade out the previous frame
   translate(blobsOriginX, blobsOriginY);
@@ -184,9 +179,10 @@ void draw()
     }
     spectrum.startPattern();
   }
-  if (spectrum.isRunning() || spectrum.isStopping()) {
-    spectrum.update();
-  }
+  //if (spectrum.isRunning() || spectrum.isStopping()) {
+    // FIXME: this is crashing on dev mac, 100% of the time now but 0% earlier. port leak or something?
+  //  spectrum.update();
+  //}
   
   // Start patterns a second after we stop tracking someone
   if (currentMillis - timeBlobsLastSeen > 1000) {
@@ -249,8 +245,11 @@ void draw()
 
 public void renderRegionToStrand(int regionStartX, int regionStartY, int regionWidth, int regionHeight)
 {
-  colorMode(RGB, 100);
   List<Strip> strips = registry.getStrips();
+  if (strips.size() == 0) {
+    return;
+  }
+  colorMode(RGB, 100);
   int x=0;
   int y=0;
   int stripy = 0;

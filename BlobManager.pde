@@ -89,8 +89,8 @@ public class BlobManager
         blob.coast();
       }
       
-      if (flamingoPattern!= null) {
-        blob.checkCollisionWithFlamingos(flamingoPattern.flamingos);
+      if (flamingoPattern != null) {
+        blob.checkCollisionWithTargets(flamingoPattern.flamingos);
       }
       
       // Remove blobs that are very awol

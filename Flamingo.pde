@@ -6,12 +6,12 @@ public enum FlamingoMode {
   War,
   Test,
   Nyan,
+  ConeDown,
+  ConesOnly,
 };
 
 final int DirectionLeft = -1;
 final int DirectionRight = 1;
-
-final int kDyingAnimationDuration = 1 * 600;
 
 public static <T extends Enum<?>> T randomEnum(Class<T> C)
 {
@@ -24,13 +24,19 @@ String[][] body = { {"000000102",
                      "000003130",
                      "003113130",
                      "031111130",
-                     "311111130"},
+                     "311111130"}, // regular
                   
                     {"000020100",
                      "000003130",
                      "003113130",
                      "031111130",
-                     "311111130"}
+                     "311111130"}, // look back
+                     
+                    {"000000000",
+                     "000000311",
+                     "003113132",
+                     "031111130",
+                     "311111130"}, // sad
                 };
 
 color[] bodyColors = {color(0,0,255,0), color(255,20,147), color(220, 106, 5), color(0,0,0,220)};
@@ -58,7 +64,7 @@ String[][] legs = { {"001100",
                      "010000"}
 };
 
-color[] legColors = {color(0,0,0,0), color(100, 50, 80)};
+color legColors[] = {color(0,0,0,0), color(100, 50, 80)};
 
 PImage legImages[] = null;
 
@@ -70,6 +76,31 @@ int legsHeight = legs[0].length;
 
 int flamingoWidth = max(bodyWidth, legsWidth);
 int flamingoHeight = max(bodyHeight, legsHeight);
+
+String[][] cone = { {"0000000",
+                     "0222000",
+                     "2222200",
+                     "2222200",
+                     "0111000",
+                     "0111000",
+                     "0010000",
+                     "0000000"},
+                         
+                    {"0000000",
+                     "0000000",
+                     "0000000",
+                     "0010000",
+                     "0111000",
+                     "0111000",
+                     "0222200",
+                     "2222222"},
+};
+int coneWidth = cone[0][0].length();
+
+PImage coneImages[] = null;
+
+color coneColor = #FF9800;
+color[] iceCreamColors = {#E91E63, #795548, #ffffff, #fff8e1, #00bcd4, #00e676}; 
 
 private PImage[] imagesForData(String[][] data, color[] colors)
 {
@@ -100,44 +131,128 @@ private PImage[] imagesForData(String[][] data, color[] colors)
 
 // ------------------------------------------------------- //
 
-public class Flamingo {
+public abstract class Target {
   float x;
-  boolean facingFront;
-  int legPose;
   int direction; // 1 or -1
   float speed; // pixels / tick at the moment
-  float swapHeadChance;
   
   int life;
   int dyingStart;
   color impactTint;
   
-  public Flamingo(int startDirection, int startLife)
+  int deathAnimationDuration = 1 * 600;
+  
+  public Target(int startDirection, int startLife)
   {
     speed = 1;
     direction = startDirection;
-    facingFront = true;
-    swapHeadChance = 0.1;
     life = startLife;
-    
-    legPose = rand.nextInt(legImages.length);
+    dyingStart = 0;
   }
   
   public boolean isDead()
   {
-    return life == 0 && (millis() - dyingStart) > kDyingAnimationDuration;
+    return life == 0 && dyingStart > 0 && (millis() - dyingStart) > deathAnimationDuration;
   }
   
-  public void tick()
+  public void tick() { }
+  public void draw() { }
+  
+  void applyDeathAnimation(float progress)
   {
+    float dropoff = 22.5 * progress * progress - 14.5 * progress;
+    translate(0, dropoff);
+    
+    int impactAlpha = (int)(255 * (1 - progress));
+    
+    if (impactTint != 0) {
+      tint(impactTint, impactAlpha);
+    } else {
+      noTint();
+    }
+  }
+  
+  public void drawTarget()
+  {
+    colorMode(RGB, 255);
+    blendMode(BLEND);
+    
+    pushMatrix();
+    
+    float deathAnimationProgress = (dyingStart > 0 ? (millis() - dyingStart) / (float)deathAnimationDuration : 0);
+    applyDeathAnimation(deathAnimationProgress);
+    
+    translate((int)x, 0, 0);
+    scale(direction, 1, 1);
+    if (direction == DirectionLeft) {
+      translate(-width(), 0, 0);
+    }
+    
+    draw();
+    
+    popMatrix();
+  }
+  
+  public boolean collidesWithBlobby(Blobby b)
+  {
+    if (life > 0 && !b.isDead()) {
+      PVector pos = b.position;
+      if (pos.y > 0 && pos.y < displayHeight) {
+        float center = this.x + width() / 2.0;
+        return pos.x > center - 2 && pos.x < center + 2;
+      }
+    }
+    return false;
+  }
+  
+  public void checkForDeath() {
+    if (life == 0 && dyingStart == 0) {
+      dyingStart = millis();
+    }
+  }
+  
+  public void impactWithBlobby(Blobby b)
+  {
+    println("Target " + this + " hit by blobby " + b);
+    assert life > 0;
+    life -= 1;
+    impactTint = b.blobbyColor;
+    checkForDeath();
+    b.impact();
+  }
+  
+  public abstract int width();
+};
+
+public class Flamingo extends Target {
+  boolean facingFront;
+  int legPose;
+  float swapHeadChance;
+  boolean sad;
+  boolean usePauses = false;
+  
+  public Flamingo(int startDirection, int startLife)
+  {
+    super(startDirection, startLife);
+    facingFront = true;
+    swapHeadChance = 0.1;
+    
+    legPose = rand.nextInt(legImages.length);
+  }
+  
+  public int width() {
+    return flamingoWidth;
+  }
+  
+  public void tick() {
+    super.tick(); //<>//
     if (life > 0) {
       // preen
       if (rand.nextFloat() < swapHeadChance) {
         facingFront = rand.nextBoolean();
       }
       
-      // may pause
-      if (rand.nextInt(100) > 0) {
+      if (usePauses && rand.nextInt(100) > 0) {
         assert direction != 0;
         x += direction * speed;
         if (speed != 0) {
@@ -149,67 +264,52 @@ public class Flamingo {
     }
   }
   
-  float deathAnimationFunction(float progress)
-  {
-    return 22.5 * progress * progress - 14.5 * progress;
+  public void draw() {
+    PImage bodyImg = bodyImages[sad ? 2 : (facingFront ? 0 : 1)];
+    PImage legsImg = legImages[this.legPose];
+    image(bodyImg, 0, 0);
+    image(legsImg, 1, bodyImg.height);
+  }
+}
+
+
+public class Cone extends Target {
+  PImage coneImages[];
+  
+  public Cone(int startDirection, int startLife) {
+    super(startDirection, startLife);
+    
+    deathAnimationDuration = 1400;
+    
+    color colors[] = {#000000, coneColor, iceCreamColors[rand.nextInt(iceCreamColors.length)]};
+    coneImages = imagesForData(cone, colors);
   }
   
-  public void draw()
-  {
-    colorMode(RGB, 255);
-    blendMode(BLEND);
-    PImage bodyImg = bodyImages[facingFront ? 0 : 1];
-    PImage legsImg = legImages[this.legPose];
-    
-    pushMatrix();
-    
-    int impactAlpha = 255;
-    if (dyingStart > 0) {
-      float impactProgress = (millis() - dyingStart) / (float)kDyingAnimationDuration;
-      impactAlpha = (int)(255 * (1 - impactProgress));
-      translate(0, deathAnimationFunction(impactProgress));
+  public int width() { //<>//
+    return coneWidth;
+  }
+  
+  public void tick() {
+    super.tick();
+    if (life > 0) {
+      assert direction != 0;
+      x += direction * speed;
     }
+  }
+  
+  void applyDeathAnimation(float progress) {
+    int impactAlpha = (int)(255 * (1 - progress));
     
-    if (impactTint != 0) {
-      tint(impactTint, impactAlpha);
+    if (impactAlpha < 255) {
+      tint(255, impactAlpha);
     } else {
       noTint();
     }
-    
-    translate((int)x, 0, 0);
-    scale(direction, 1, 1);
-    if (direction == DirectionLeft) {
-      translate(-flamingoWidth, 0, 0);
-    }
-    
-    image(bodyImg, 0, 0);
-    image(legsImg, 1, bodyImg.height);
-    
-    popMatrix();
   }
   
-  public boolean collidesWithBlobby(Blobby b)
-  {
-    if (life > 0 && !b.isDead()) {
-      PVector pos = b.position;
-      if (pos.y > 0 && pos.y < displayHeight) {
-        float flamingoCenter = this.x + flamingoWidth / 2.0;
-        return pos.x > flamingoCenter - 2 && pos.x < flamingoCenter + 2;
-      }
-    }
-    return false;
-  }
-  
-  public void impactWithBlobby(Blobby b)
-  {
-    println("Flamingo " + this + " hit by blobby " + b);
-    assert life > 0;
-    life -= 1;
-    impactTint = b.blobbyColor;
-    if (life == 0) {
-      dyingStart = millis();
-    }
-    b.impact();
+  public void draw() {
+    PImage coneImage = coneImages[life > 0 ? 0 : 1];
+    image(coneImage, 0, 0);
   }
 }
 
@@ -217,7 +317,7 @@ public class Flamingo {
 
 public class FlamingoPattern extends IdlePattern
 {
-  private LinkedList<Flamingo> flamingos;
+  private LinkedList<Target> flamingos;
   
   FlamingoMode mode;
   int modeStart;
@@ -235,7 +335,7 @@ public class FlamingoPattern extends IdlePattern
   int lastSpawnFromSpawnRate;
   
   int lastTick;
-  int direction;
+  int direction = 1;
   
   public String toString()
   {
@@ -253,7 +353,7 @@ public class FlamingoPattern extends IdlePattern
       legImages = imagesForData(legs, legColors);
     }
     
-    flamingos = new LinkedList<Flamingo>();
+    flamingos = new LinkedList<Target>();
   }
   
   void enterSubmode(int sm)
@@ -262,16 +362,40 @@ public class FlamingoPattern extends IdlePattern
     submodeStart = millis();
   }
   
-  Flamingo spawnFlamingo(int direction)
+  Target spawn(int direction, int startLife, boolean isCone)
   {
-    int startLife = 2;
-    Flamingo f = new Flamingo(direction, startLife);
-    if (direction > 0) {
-      f.x = -flamingoWidth;
+    Target t;
+    if (isCone) {
+      t = new Cone(direction, startLife);
     } else {
-      f.x = displayWidth + flamingoWidth;
+      t = new Flamingo(direction, startLife);
     }
-    flamingos.addLast(f);
+    if (direction > 0) {
+      t.x = -t.width();
+    } else {
+      t.x = displayWidth + t.width();
+    }
+    flamingos.addLast(t);
+    return t;
+  }
+  
+  Target spawnFromMode(int direction) {
+  if (mode == FlamingoMode.ConesOnly) {
+      return spawnCone(direction);
+    } else {
+      return spawnFlamingo(direction);
+    }    
+  }
+  
+  Cone spawnCone(int direction) {
+    return (Cone)spawn(direction, 1, true);
+  }
+  
+  Flamingo spawnFlamingo(int direction) {
+    Flamingo f = (Flamingo)spawn(direction, 2, false);
+    if (mode == FlamingoMode.Mess || mode == FlamingoMode.Parade) {
+      f.usePauses = true;
+    }
     return f;
   }
   
@@ -318,6 +442,17 @@ public class FlamingoPattern extends IdlePattern
         bursts = new LinkedList<NyanBurst>();
         break;
       }
+      case ConeDown: {
+        Flamingo f = spawnFlamingo(direction);
+        f.swapHeadChance = 0;
+        Cone c = spawnCone(direction);
+        c.x += direction * c.width();
+        break;
+      }
+      case ConesOnly: {
+        spawnRate = 1;
+        break;
+      }
     }
   }
   
@@ -337,7 +472,7 @@ public class FlamingoPattern extends IdlePattern
   {
     direction = randomDirection();
     deathToll = 0;
-     
+    
     FlamingoMode m;
     do {
       m = randomEnum(FlamingoMode.class);
@@ -376,7 +511,7 @@ public class FlamingoPattern extends IdlePattern
         break;
       case WhereAmI: {
         if (flamingos.size() > 0) {
-          Flamingo f = flamingos.getFirst();
+          Flamingo f = (Flamingo)flamingos.getFirst();
           if (submode == 0) {
             if (f.x == displayWidth / 2 + 12) {
               f.speed = 0;
@@ -409,6 +544,47 @@ public class FlamingoPattern extends IdlePattern
           spawnChance *= messPeak; // max density chance one flamingo ever 4 pixels
         }
         break;
+      case ConesOnly: {
+        final int kConeRuntime = 30 * 1000;
+        if (isRunning() && runTime() > kConeRuntime) {
+          spawnRate = 0;
+        }
+        if (isRunning() && runTime() > kConeRuntime + 6000) {
+          lazyStop();
+        }
+        break;
+      }
+      case ConeDown: {
+        if (flamingos.size() > 0) {
+          Flamingo f = (Flamingo)flamingos.getFirst();
+          Cone c = (flamingos.size() > 1 ? (Cone)flamingos.getLast() : null);
+          if (submode == 0) {
+            if (f.x == displayWidth / 2 + 12) {
+              f.speed = 0;
+              if (c != null) {
+                c.life = 0;
+              }
+              enterSubmode(1);
+            }
+          } else if (submode == 1) {
+            if (millis() - submodeStart > 1000) {
+              f.sad = true;
+            }
+            if (millis() - submodeStart > 2000) {
+              if (c != null) {
+                c.checkForDeath();
+              }
+            }
+            if (millis() - submodeStart > 4500) {
+              enterSubmode(2);
+            }
+          } else if (submode == 2) {
+            f.sad = false;
+            f.speed = 1;
+          }
+        }
+        break;
+      }
       default:
         break;
     }
@@ -424,24 +600,24 @@ public class FlamingoPattern extends IdlePattern
       
       boolean spawnAllowed = (mode == FlamingoMode.Test || !this.isStopping());
       if (spawnAllowed && rand.nextFloat() < this.spawnChance) {
-        spawnFlamingo(direction);
+        spawnFromMode(direction);
       }
-      if (spawnAllowed && millis() - lastSpawnFromSpawnRate > 1/spawnRate * 1000) {
-        spawnFlamingo(direction);
+      if (spawnAllowed && spawnRate > 0 && millis() - lastSpawnFromSpawnRate > 1/spawnRate * 1000) {
+        spawnFromMode(direction);
         lastSpawnFromSpawnRate = millis();
       }
       
-      Iterator<Flamingo> it = flamingos.iterator();
+      Iterator<Target> it = flamingos.iterator();
       while (it.hasNext()) {
-        Flamingo flamingo = it.next();
-        flamingo.tick();
+        Target target = it.next();
+        target.tick();
         int nyanAddition = (mode == FlamingoMode.Nyan ? nyanWaveLength : 0);
-        if (flamingo.x + flamingoWidth > displayWidth + 20 + nyanAddition || flamingo.x < -20 - nyanAddition) {
+        if (target.x + target.width() > displayWidth + 20 + nyanAddition || target.x < -20 - nyanAddition) {
           if (mode != FlamingoMode.Nyan) {
           }
           it.remove();
         }
-        if (flamingo.isDead()) {
+        if (target.isDead()) {
           it.remove();
           deathToll++;
           if (deathToll > 2 && mode != FlamingoMode.War) {
@@ -454,8 +630,8 @@ public class FlamingoPattern extends IdlePattern
       updateMode(tickMillis);
     }
     
-    for (Flamingo flamingo : flamingos) {
-      flamingo.draw();
+    for (Target flamingo : flamingos) {
+      flamingo.drawTarget();
       
       if (mode == FlamingoMode.Nyan) {
         drawRainbowTail(flamingo);
@@ -491,7 +667,7 @@ public class FlamingoPattern extends IdlePattern
   private LinkedList<NyanBurst> bursts;
   private int nyanWaveLength = 45; // 15 * 3
   
-  void drawRainbowTail(Flamingo f) {
+  void drawRainbowTail(Target f) {
     noFill();
     colorMode(HSB, 100);
     

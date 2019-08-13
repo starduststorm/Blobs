@@ -92,6 +92,10 @@ public abstract class IdlePattern
     return startMillis != -1 && this.isStopping() == false;
   }
   
+  public int runTime() {
+    return millis() - startMillis;
+  }
+  
   public boolean isStopping()
   {
     return this.stopMillis != -1;

@@ -249,12 +249,12 @@ headPx = [ 160.55844, 5.5222387, 0.0 ]
     }
   }
   
-  void checkCollisionWithFlamingos(LinkedList<Flamingo> flamingos)
+  void checkCollisionWithTargets(LinkedList<Target> targets)
   {
-    for (Flamingo f : flamingos) {
+    for (Target t : targets) {
       for (Blobby b : blobbies) {
-        if (f.collidesWithBlobby(b)) {
-          f.impactWithBlobby(b);
+        if (t.collidesWithBlobby(b)) {
+          t.impactWithBlobby(b);
           break;
         }
       }
