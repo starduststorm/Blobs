@@ -100,6 +100,7 @@ int coneWidth = cone[0][0].length();
 PImage coneImages[] = null;
 
 color coneColor = #FF9800;
+// FIXME: pallettes/sequences for ice cream colors. put GQ flag + other flags in there!
 color[] iceCreamColors = {#E91E63, #795548, #ffffff, #fff8e1, #00bcd4, #00e676}; 
 
 private PImage[] imagesForData(String[][] data, color[] colors)

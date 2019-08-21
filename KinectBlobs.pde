@@ -87,12 +87,12 @@ void setup()
   //idlePatterns.add(spectrum);
   
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
-  //idlePatterns.add(new RainbowPattern(displayWidth, displayHeight));
+  
   FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
   idlePatterns.add(flamingoPattern);
-  idlePatterns.add(new TextBanner(displayWidth, displayHeight));
-  
   blobManager.flamingoPattern = flamingoPattern;
+  
+  idlePatterns.add(new TextBanner(displayWidth, displayHeight));
 }
 
 void draw()
@@ -150,7 +150,7 @@ void draw()
   translate(blobsOriginX, blobsOriginY);
   colorMode(RGB, 100);
   blendMode(SUBTRACT);
-  int fadeRate = 2;
+  int fadeRate = 20;
   fill(fadeRate, fadeRate, fadeRate, 100);
   noStroke();
   rect(0, 0, blobsRegionWidth, blobsRegionHeight);
