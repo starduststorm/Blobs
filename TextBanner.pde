@@ -35,7 +35,7 @@ public class TextBanner extends IdlePattern
   long modeMillis;
   long submodeMillis;
   
-  int followLeader;
+  float followLeader;
   
   public TextBanner(int displayWidth, int displayHeight)
   {
@@ -172,14 +172,14 @@ public class TextBanner extends IdlePattern
           text(campName, textStart, displayHeight);
           int textEnd = displayWidth / 2 + textSize / 2;
           for (int i = 1; i < 20; ++i) {
-            stroke(Math.floorMod((i - followLeader/4) * 37, 100), 100, 100);
-            int x1 = textStart - i * 4 - followLeader % 4;
+            stroke(Math.floorMod((i - (int)followLeader/4) * 37, 100), 100, 100);
             float lineHeight = max((sin(followLeader/100.) + 1) * displayHeight/2, (sin(i + followLeader/8.) + 1) * displayHeight/2);
-            int x2 = textEnd + i * 4 + followLeader % 4;
+            float x1 = textStart - i * 4 - followLeader % 4 - 0.5;
+            float x2 = textEnd + i * 4 + followLeader % 4 + 0.5;
             line(x1, displayHeight / 2 - lineHeight / 2, x1, displayHeight / 2 + lineHeight / 2);
             line(x2, displayHeight / 2 - lineHeight / 2, x2, displayHeight / 2 + lineHeight / 2);
           }
-          followLeader++;
+          followLeader+= 0.5;
           if (followLeader % 100 == 0) {
             textHue = rand.nextInt(100);
           }
