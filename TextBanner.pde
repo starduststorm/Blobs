@@ -165,8 +165,8 @@ public class TextBanner extends IdlePattern
             //stroke(Math.floorMod((i - (int)followLeader/4) * 37, 100), 100, 100);   // walk through hue
             stroke(palette.getColor((i - (int)followLeader/4) * 7), fadeInAlpha);
             float lineHeight = max((sin(followLeader/100.) + 1) * displayHeight/2, (sin(i + followLeader/8.) + 1) * displayHeight/2);
-            float x1 = textStart - i * 4 - followLeader % 4 - 0.5;
-            float x2 = textEnd + i * 4 + followLeader % 4 + 0.5;
+            float x1 = textStart - i * 4 - (int)followLeader % 4 - 0.5;
+            float x2 = textEnd + i * 4 + (int)followLeader % 4 + 0.5;
             line(x1, displayHeight / 2 - lineHeight / 2, x1, displayHeight / 2 + lineHeight / 2);
             line(x2, displayHeight / 2 - lineHeight / 2, x2, displayHeight / 2 + lineHeight / 2);
           }
