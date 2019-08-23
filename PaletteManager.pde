@@ -73,7 +73,7 @@ public class PaletteManager {
       p = palettes[i]; 
 
       for (color c : p.colors) {
-        if (red(c) < 5 && blue(c) < 5 && green(c) < 5) {
+        if (red(c) < 20 && blue(c) < 20 && green(c) < 20) {
           hasBlack = true;
           continue;
         }
