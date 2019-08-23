@@ -1,32 +1,12 @@
 
 final String campName = "C A M P  M O A R";
 
-// FIXME: Stubs for palettes
-public class Palette {
-  color colors[];
-  
-  public Palette(int... args) {
-    println(args);
-  }
-}
-
-void create_palettes() {
-  Palette ib_jul01_gp = new Palette(
-    0, 194,  1,  1,
-    94,   1, 29, 18,
-    132,  57, 131, 28,
-    255, 113,  1,  1
-  );
-}
-
-// END FIXME
-
 public class TextBanner extends IdlePattern
 {
   PFont font;
   final int fontSize = 11;
   
-  float textHue = 0;
+  color textColor;
   int textMode = -1;
   float textX = 30;
   float textDirection = 0.4;
@@ -36,6 +16,9 @@ public class TextBanner extends IdlePattern
   long submodeMillis;
   
   float followLeader;
+  Palette palette;
+  int paletteValue;
+  int paletteDirection = 1;
   
   public TextBanner(int displayWidth, int displayHeight)
   {
@@ -48,10 +31,9 @@ public class TextBanner extends IdlePattern
   
   public void startPattern()
   {
-    create_palettes();
-    
+    palette = palettes.randomNonBlackPalette();
+    paletteValue = rand.nextInt(0xFF);
     textMode = (int)random(0, 4);
-    textMode = 3; // FIXME: 
     submode = 0;
     modeMillis = millis();
     submodeMillis = modeMillis;
@@ -73,11 +55,14 @@ public class TextBanner extends IdlePattern
     drawText();
   }
   
-  void tickRainbowHue() {
-    textHue += 0.2;
-    if (textHue >= 100) {
-      textHue = 0;
+  void tickTextColor() {
+    if (paletteValue >= 255) {
+      paletteDirection = -1;
+    } else if (paletteValue <= 0) {
+      paletteDirection = 1;
     }
+    paletteValue += paletteDirection;
+    textColor = palette.getColor(paletteValue);
   }
   
   void drawText()
@@ -85,17 +70,20 @@ public class TextBanner extends IdlePattern
     clip(0, 0, displayWidth, displayHeight);
     blendMode(BLEND);
     int timeSinceText = millis() - timeTextStarted;
-    float fadeInAlpha = 100 * (timeSinceText < 3000 ? timeSinceText / 3000.0 : 1.0);
+    float fadeInAlpha = min(100, 100 * (timeSinceText < 3000 ? timeSinceText / 3000.0 : 1.0));
     
+    if (isStopping()) {
+      fadeInAlpha = max(0, 100 * (1 - (millis() - stopMillis) / 1000.));
+    }
     if (textMode == 0) {
-      tickRainbowHue();
+      tickTextColor();
       colorMode(HSB, 100);
-      fill(textHue, 100, fadeInAlpha);
+      fill(textColor, fadeInAlpha);
       text("M O A R", displayWidth / 2 - 20 + 90 * sin(millis() / 1000.0), displayHeight);
     } else if (textMode == 1) {
-      tickRainbowHue();
+      tickTextColor();
       colorMode(HSB, 100);
-      fill(textHue, 100, fadeInAlpha);
+      fill(textColor, fadeInAlpha);
       pushMatrix();
       translate(displayWidth / 2, displayHeight / 2);
       scale(0.8 + 2 * (1 + sin(millis() / 1000.0)));
@@ -103,9 +91,9 @@ public class TextBanner extends IdlePattern
       popMatrix();
       
     } else if (textMode == 2) {
-      tickRainbowHue();
+      tickTextColor();
       colorMode(HSB, 100);
-      fill(textHue, 100, fadeInAlpha);
+      fill(textColor, fadeInAlpha);
       pushMatrix();
       translate(textX, displayHeight / 2);
       rotate(millis() / 500.0);
@@ -116,7 +104,7 @@ public class TextBanner extends IdlePattern
         textDirection *= -1;
       }
     } else if (textMode == 3) {
-      lineyMode();
+      lineyMode(fadeInAlpha);
     }
       
     //else if (textMode == 3) {
@@ -137,7 +125,10 @@ public class TextBanner extends IdlePattern
     
     noClip();
     
-    if (isStopping()) {
+    if (isRunning() && runTime() > 45 * 1000) {
+      lazyStop();
+    }
+    if (isStopping() && fadeInAlpha <= 0) {
       stopCompleted();
     }
   }
@@ -147,7 +138,7 @@ public class TextBanner extends IdlePattern
     return ++submode;
   }
 
-  void lineyMode() {
+  void lineyMode(float fadeInAlpha) {
     long submodeDuration = millis() - submodeMillis;
       
       final int textSize = 88;
@@ -158,8 +149,8 @@ public class TextBanner extends IdlePattern
       switch (submode) {
         case 0: {
           int typedLength = (int)(submodeDuration / 1000. * 8);
-          
-          fill(textHue, 100, 100);
+          textColor = palette.getColor(paletteValue);
+          fill(textColor);
           text(campName.substring(0, min(typedLength, campName.length())), textStart, displayHeight);
           if (typedLength > campName.length() + 2) {
             nextSubmode();
@@ -167,12 +158,12 @@ public class TextBanner extends IdlePattern
           break;
         }
         case 1: {
-          pushMatrix();
-          fill(textHue, 100, 100);
+          fill(textColor, fadeInAlpha);
           text(campName, textStart, displayHeight);
           int textEnd = displayWidth / 2 + textSize / 2;
           for (int i = 1; i < 20; ++i) {
-            stroke(Math.floorMod((i - (int)followLeader/4) * 37, 100), 100, 100);
+            //stroke(Math.floorMod((i - (int)followLeader/4) * 37, 100), 100, 100);   // walk through hue
+            stroke(palette.getColor((i - (int)followLeader/4) * 7), fadeInAlpha);
             float lineHeight = max((sin(followLeader/100.) + 1) * displayHeight/2, (sin(i + followLeader/8.) + 1) * displayHeight/2);
             float x1 = textStart - i * 4 - followLeader % 4 - 0.5;
             float x2 = textEnd + i * 4 + followLeader % 4 + 0.5;
@@ -181,9 +172,8 @@ public class TextBanner extends IdlePattern
           }
           followLeader+= 0.5;
           if (followLeader % 100 == 0) {
-            textHue = rand.nextInt(100);
+            textColor = palette.getColor(rand.nextInt(0xFF));
           }
-          popMatrix();
         }
       }
   }

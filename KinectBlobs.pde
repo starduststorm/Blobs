@@ -18,6 +18,7 @@ KinectPV2 kinect;
 BlobManager blobManager;
 
 Random rand = new Random();
+PaletteManager palettes;
 
 ArrayList<IdlePattern> idlePatterns;
 IdlePattern activeIdlePattern = null;
@@ -73,6 +74,8 @@ void setup()
     //kinect.enableInfraredImg(true);
     kinect.init();
  }
+ 
+  palettes = new PaletteManager();
  
   prepareExitHandler();
   

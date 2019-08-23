@@ -246,7 +246,7 @@ public class Flamingo extends Target {
   }
   
   public void tick() {
-    super.tick(); //<>//
+    super.tick();
     if (life > 0) {
       // preen
       if (rand.nextFloat() < swapHeadChance) {

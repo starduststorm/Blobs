@@ -8,6 +8,7 @@ private class Bit
   private PVector pos;
   PVector direction;
   private int birthdate;
+  color bitColor;
   
   public Bit(PVector initialPosition)
   {
@@ -46,6 +47,7 @@ public class BitsPattern extends IdlePattern
 {
   LinkedList<Bit> bits;
   color bitsColor;
+  Palette palette;
   
   public BitsPattern(int displayWidth, int displayHeight)
   {
@@ -56,14 +58,20 @@ public class BitsPattern extends IdlePattern
   public void startPattern()
   {
     super.startPattern();
+    palette = null;
     colorMode(RGB, 100);
     // bits re-appearing, get a new color
-    color[] colors = {color(5,70,5), color(70, 5, 5), color(5, 5, 70), color(100,8,58)};
-    bitsColor = colors[(int)random(colors.length)];
-    do {
-      bitsColor = color((int)random(100),(int)random(100),(int)random(100));
-    } while ((red(bitsColor) > 8 && green(bitsColor) > 8 && blue(bitsColor) > 8)
-          || (red(bitsColor) < 20 && green(bitsColor) < 20 && blue(bitsColor) < 20));
+    if (rand.nextInt(2) == 0) {
+      palette = palettes.randomPalette();
+    } else {
+      // FIXME: are these just legacy colors before we did random?
+      //color[] colors = {color(5,70,5), color(70, 5, 5), color(5, 5, 70), color(100,8,58)};
+      //bitsColor = colors[(int)random(colors.length)];
+      do {
+        bitsColor = color((int)random(100),(int)random(100),(int)random(100));
+      } while ((red(bitsColor) > 8 && green(bitsColor) > 8 && blue(bitsColor) > 8)
+            || (red(bitsColor) < 20 && green(bitsColor) < 20 && blue(bitsColor) < 20));
+    }
   }
   
   public void update()
@@ -71,6 +79,11 @@ public class BitsPattern extends IdlePattern
     if (this.isRunning()) {
       for (int i = 0; i < 2; ++i) {
         Bit newBit = new Bit(new PVector((int)random(0, displayWidth) + 0.5, (int)random(0, displayHeight)));
+        if (palette != null) {
+          newBit.bitColor = palette.getRandom();
+        } else {
+          newBit.bitColor = bitsColor;
+        }
         bits.add(newBit);
       }
     }
@@ -86,7 +99,7 @@ public class BitsPattern extends IdlePattern
     for (Iterator<Bit> it = bits.iterator(); it.hasNext(); ) {
       Bit bit = it.next();
       float alpha = 100 * bit.ageAlpha();
-      stroke(bitsColor, alpha);
+      stroke(bit.bitColor, alpha);
       point(bit.pos.x, bit.pos.y, 0);
       
       if (bit.age() > 3000) {
