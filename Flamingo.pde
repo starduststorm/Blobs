@@ -557,20 +557,33 @@ public class FlamingoPattern extends IdlePattern
       }
       case ConeDown: {
         if (flamingos.size() > 0) {
-          Flamingo f = (Flamingo)flamingos.getFirst();
-          Cone c = (flamingos.size() > 1 ? (Cone)flamingos.getLast() : null);
+          Flamingo f = null;
+          Cone c = null;
+          for (Target obj : flamingos) {
+            if (obj.getClass() == Flamingo.class) {
+              f = (Flamingo)obj;
+            } else if (obj.getClass() == Cone.class) {
+              c = (Cone)obj;
+            }
+
+          
+          //Cone c = (flamingos.size() > 1 ? (Cone)flamingos.getLast() : null);
           if (submode == 0) {
-            if (f.x == displayWidth / 2 + 12) {
-              f.speed = 0;
-              if (c != null) {
-                c.life = 0;
+            if (f != null) {
+              if (f.x == displayWidth / 2 + 12) {
+                f.speed = 0;
+                if (c != null) {
+                  c.life = 0;
+                }
+                enterSubmode(1);
               }
-              enterSubmode(1);
             }
           } else if (submode == 1) {
             if (millis() - submodeStart > 1000) {
-              f.sad = true;
-            }
+              if (f != null) {
+                f.sad = true;
+              }
+          }
             if (millis() - submodeStart > 2000) {
               if (c != null) {
                 c.checkForDeath();
@@ -580,8 +593,10 @@ public class FlamingoPattern extends IdlePattern
               enterSubmode(2);
             }
           } else if (submode == 2) {
-            f.sad = false;
-            f.speed = 1;
+            if (f != null) {
+              f.sad = false;
+              f.speed = 1;
+            }
           }
         }
         break;
