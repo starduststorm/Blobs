@@ -62,7 +62,7 @@ public class Blobby
     
     switch (type) {
       case Liney: {
-        stroke(red(c), green(c), blue(c), 60);
+        stroke(red(c), green(c), blue(c), 80);
         noFill();
         float x = round(this.position.x) + 0.5; 
         this.position.y = sin(this.position.x / 12.0) * blobsRegionHeight / 2.0 + blobsRegionHeight / 2.0;
@@ -79,7 +79,7 @@ public class Blobby
       
       case Blobby: {
         noStroke();
-        fill(red(c), green(c), blue(c), 60);
+        fill(red(c), green(c), blue(c), 100);
         final float radius = 3;
         ellipse(this.position.x, this.position.y, radius, radius);
         break;

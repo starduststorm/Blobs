@@ -90,7 +90,7 @@ public class Blob implements GestureDelegate
   public float _tweakY(float y)
   {
     // It's kind of hard to reach the top and bottom of the frame, so magnify it a bit. 
-    return (y - height / 2.0) * 1.5 + height / 2.0 + 1;
+    return (y - displayHeight / 2.0) * 1.5 + displayHeight / 2.0 + 1;
   }
   
   boolean armed()
@@ -135,7 +135,7 @@ public class Blob implements GestureDelegate
     PVector leftHipPt = new PVector(leftHip.getX(), leftHip.getY(), leftHip.getZ());
     PVector rightHipPt = new PVector(rightHip.getX(), rightHip.getY(), rightHip.getZ());
     
-    final float kHandShoulderThreshold = 50;
+    final float kHandShoulderThreshold = 80;
     final float kHandHipThreshold = 20.0; // Don't shoot blobbies when hands are resting at sides
     final float kPixelPointTweak = 4.0;
     float leftHandDistance = leftShoulderPt.dist(leftHandPt);
@@ -196,6 +196,7 @@ public class Blob implements GestureDelegate
       // Draw the positions of the hands, regarding the blobby thresholds
       ellipse(leftShoulderPx.x - leftHandDistance / kPixelPointTweak, leftHandPx.y, 2, 2);
       ellipse(rightShoulderPx.x + rightHandDistance / kPixelPointTweak, rightHandPx.y, 2, 2);
+      //println("leftHandPx = " + leftHandPx + ", rightHandPx = " + rightHandPx);
       
       color footsColor = #0000FF;
       

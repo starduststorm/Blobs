@@ -39,7 +39,7 @@ String[][] body = { {"000000102",
                      "311111130"}, // sad
                 };
 
-color[] bodyColors = {color(0,0,255,0), color(255,20,147), color(220, 106, 5), color(0,0,0,220)};
+color[] bodyColors = {color(0,0,0,0), color(255,40,177, 255), color(235, 156, 5, 255), color(0,0,0,220)};
 
 PImage bodyImages[] = null;
 
@@ -64,7 +64,7 @@ String[][] legs = { {"001100",
                      "010000"}
 };
 
-color legColors[] = {color(0,0,0,0), color(100, 50, 80)};
+color legColors[] = {color(0,0,0,0), color(255, 204, 204)};
 
 PImage legImages[] = null;
 
@@ -161,11 +161,13 @@ public abstract class Target {
   
   void applyDeathAnimation(float progress)
   {
+    
     float dropoff = 22.5 * progress * progress - 14.5 * progress;
     translate(0, dropoff);
     
     int impactAlpha = (int)(255 * (1 - progress));
-    
+    //println("applydeath: progress = " + progress + ", dropoff = " + dropoff + ", impactAlpha = "+ impactAlpha);
+    impactAlpha=255; // otherwise it just disappears?
     if (impactTint != 0) {
       tint(impactTint, impactAlpha);
     } else {
@@ -177,7 +179,7 @@ public abstract class Target {
   {
     colorMode(RGB, 255);
     blendMode(BLEND);
-    
+    pushStyle();
     pushMatrix();
     
     float deathAnimationProgress = (dyingStart > 0 ? (millis() - dyingStart) / (float)deathAnimationDuration : 0);
@@ -192,6 +194,7 @@ public abstract class Target {
     draw();
     
     popMatrix();
+    popStyle();
   }
   
   public boolean collidesWithBlobby(Blobby b)
@@ -217,7 +220,7 @@ public abstract class Target {
     println("Target " + this + " hit by blobby " + b);
     assert life > 0;
     life -= 1;
-    impactTint = b.blobbyColor;
+    impactTint = color(255,255,255,80);//b.blobbyColor;
     checkForDeath();
     b.impact();
   }
@@ -565,7 +568,8 @@ public class FlamingoPattern extends IdlePattern
             } else if (obj.getClass() == Cone.class) {
               c = (Cone)obj;
             }
-
+          }
+          // FIXME: why do we assign f & c in a for loop and only keep the last?
           
           //Cone c = (flamingos.size() > 1 ? (Cone)flamingos.getLast() : null);
           if (submode == 0) {

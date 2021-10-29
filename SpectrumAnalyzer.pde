@@ -49,7 +49,8 @@ public class SpectrumAnalyzer extends IdlePattern
       }
     }
     
-    volumeRunningAverage = (volumeRunningAverage * (kVolumeFrameCount - 1) + volumePeak) / kVolumeFrameCount;  
+    volumeRunningAverage = (volumeRunningAverage * (kVolumeFrameCount - 1) + volumePeak) / kVolumeFrameCount;
+    // println("volumeRunningAverage = " + volumeRunningAverage);
   }
   
   public boolean wantsToRun()
