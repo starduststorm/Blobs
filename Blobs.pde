@@ -11,7 +11,7 @@ import KinectPV2.*;
 
 final boolean useSpectrum = false;
 
-final boolean showCameras = true;
+final boolean showCameras = false;
 
 DeviceRegistry registry;
 TestObserver testObserver;
@@ -78,11 +78,13 @@ void setup()
  if (useKinect) {
    // Init Kinect
     kinect = new KinectPV2(this);   
-    kinect.enableDepthImg(true);   
     kinect.enableSkeletonDepthMap(true);
     //kinect.enableSkeleton3DMap(true);
-    kinect.enableBodyTrackImg(true);
-    kinect.enableInfraredImg(true);
+    if (showCameras) {
+      kinect.enableBodyTrackImg(true);
+      kinect.enableInfraredImg(true);
+      kinect.enableDepthImg(true);
+    }
     kinect.init();
  }
  
@@ -130,18 +132,21 @@ void draw()
   
     PVector depthImageLoc = new PVector(0, 4*blobsRegionHeight);
 
+  if (showCameras) {
+    pushStyle();
+    fill(0);
+    stroke(0);
+    rect(0, depthImageLoc.y, width, height - depthImageLoc.y);
   
-  fill(0);
-  stroke(0);
-  rect(0, depthImageLoc.y, width, height - depthImageLoc.y);
-  
-  image(kinect.getDepthImage(), depthImageLoc.x, depthImageLoc.y);
-  image(kinect.getInfraredImage(), 512*2, 2*blobsRegionHeight);
+    image(kinect.getDepthImage(), depthImageLoc.x, depthImageLoc.y);
+    image(kinect.getInfraredImage(), 512*2, 2*blobsRegionHeight);
 
-  PImage bodyImage = kinect.getBodyTrackImage();
-  bodyImage.filter(INVERT);
-  bodyImage.filter(DILATE);
-  image(bodyImage, 512, 0);
+    PImage bodyImage = kinect.getBodyTrackImage();
+    bodyImage.filter(INVERT);
+    bodyImage.filter(DILATE);
+    image(bodyImage, 512, 0);
+    popStyle();
+  }
   
   if (frameCount %100 == 0) {
     println("Framerate: " + frameRate);
