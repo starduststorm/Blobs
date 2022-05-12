@@ -11,6 +11,8 @@ import KinectPV2.*;
 
 final boolean useSpectrum = false;
 
+final boolean showCameras = true;
+
 DeviceRegistry registry;
 TestObserver testObserver;
 
@@ -52,10 +54,19 @@ class TestObserver implements Observer {
   }
 }
 
+void settings()
+{
+  int w,h;
+  if (showCameras) {
+    w = 1536; h = 440;
+  } else {
+    w = 240; h = 24;
+  }
+  size(w, h, P3D);
+}
+
 void setup()
 {
-  size(1536, 440, P3D);
-  //size(240, 24, P3D);
   frameRate(60);
   
   // Init pixelpusher
