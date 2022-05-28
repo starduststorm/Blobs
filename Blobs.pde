@@ -13,7 +13,7 @@ final boolean useSpectrum = false;
 
 final boolean showCameras = false;
 
-final boolean mountRtL = true; // banner mounted right-to-left
+final boolean mountRtL = false; // banner mounted right-to-left
 
 DeviceRegistry registry;
 TestObserver testObserver;
@@ -211,7 +211,7 @@ void draw()
     }
     spectrum.startPattern();
   }
-  if (spectrum.isRunning() || spectrum.isStopping()) {
+  if (spectrum != null && (spectrum.isRunning() || spectrum.isStopping())) {
     // FIXME: this is crashing on dev mac, 100% of the time now but 0% earlier. port leak or something?
     spectrum.update();
   }
@@ -224,7 +224,7 @@ void draw()
       }
     }
     
-    if (activeIdlePattern == null && !spectrum.isRunning()) {
+    if (activeIdlePattern == null && spectrum != null && !spectrum.isRunning()) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
       if (idlePattern != lastIdlePattern && !idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
@@ -248,7 +248,7 @@ void draw()
         // null out idle patterns when *stopping* can do cross-transition from pattern to pattern bettter
         activeIdlePattern = null;
         pattern.lazyStop();
-        if (useSpectrum && spectrum.isRunning()) {
+        if (spectrum != null && spectrum.isRunning()) {
           spectrum.lazyStop();
         }
       }
