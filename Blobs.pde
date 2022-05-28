@@ -13,6 +13,8 @@ final boolean useSpectrum = false;
 
 final boolean showCameras = false;
 
+final boolean mountRtL = true; // banner mounted right-to-left
+
 DeviceRegistry registry;
 TestObserver testObserver;
 
@@ -34,7 +36,7 @@ int timeBlobsLastSeen = -1;
 int timeBlobsFirstSeen = -1;
 
 final int displayHeight = 8;
-final int displayWidth = 240;
+final int displayWidth = 236;
 
 final int blobsOriginY = 16;
 final int blobsOriginX = 0;
@@ -60,7 +62,7 @@ void settings()
   if (showCameras) {
     w = 1536; h = 440;
   } else {
-    w = 240; h = 24;
+    w = displayWidth; h = 24;
   }
   size(w, h, P3D);
 }
@@ -99,9 +101,10 @@ void setup()
   idlePatterns = new ArrayList<IdlePattern>();
   
   // FIXME: this is crashing on dev mac, 100% of the time now but 0% earlier. port leak or something?
-  spectrum = new SpectrumAnalyzer(displayWidth, displayHeight, this);
-  idlePatterns.add(spectrum);
-  
+  if (useSpectrum) {
+    spectrum = new SpectrumAnalyzer(displayWidth, displayHeight, this);
+    idlePatterns.add(spectrum);
+  }
   idlePatterns.add(new BitsPattern(displayWidth, displayHeight));
   
   FlamingoPattern flamingoPattern = new FlamingoPattern(displayWidth, displayHeight);
@@ -290,7 +293,11 @@ public void renderRegionToStrand(int regionStartX, int regionStartY, int regionW
   for (Strip strip : strips) {
    int xscale = regionWidth / strip.getLength();
    for (int stripx = 0; stripx < strip.getLength(); stripx++) {
-     x = stripx * xscale + regionStartX;
+     if (mountRtL) {
+       x = blobsRegionWidth - (stripx * xscale + regionStartX) - 1;
+     } else {
+       x = stripx * xscale + regionStartX;
+     }
      y = stripy * yscale + regionStartY; 
      color c = get(x, y);
      c = color(red(c), blue(c), green(c)); // notorious
