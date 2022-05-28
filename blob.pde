@@ -135,7 +135,7 @@ public class Blob implements GestureDelegate
     PVector leftHipPt = new PVector(leftHip.getX(), leftHip.getY(), leftHip.getZ());
     PVector rightHipPt = new PVector(rightHip.getX(), rightHip.getY(), rightHip.getZ());
     
-    final float kHandShoulderThreshold = 80;
+    final float kHandShoulderThreshold = 60; //80
     final float kHandHipThreshold = 20.0; // Don't shoot blobbies when hands are resting at sides
     final float kPixelPointTweak = 4.0;
     float leftHandDistance = leftShoulderPt.dist(leftHandPt);
