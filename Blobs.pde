@@ -6,7 +6,8 @@ import com.heroicrobot.dropbit.devices.pixelpusher.PixelPusher;
 
 import java.util.*;
 
-final boolean useKinect = true;
+String os=System.getProperty("os.name");
+final boolean useKinect = os.contains("Windows");
 import KinectPV2.*;
 
 final boolean useSpectrum = false;
