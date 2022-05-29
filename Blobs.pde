@@ -114,6 +114,16 @@ void setup()
   //idlePatterns.add(new TextBanner(displayWidth, displayHeight));
 }
 
+void fadeToBlackBy(int x, int y, int width, int height, int fadeRate) {
+  pushStyle();
+  colorMode(RGB, 0xFF);
+  blendMode(SUBTRACT);
+  fill(fadeRate, fadeRate, fadeRate, 0xFF);
+  noStroke();
+  rect(x, y, width, height);
+  popStyle();
+}
+
 void draw()
 {
   int currentMillis = millis();
@@ -151,7 +161,7 @@ void draw()
     popStyle();
   }
   
-  if (frameCount %100 == 0) {
+  if (frameCount % 300 == 0) {
     println("Framerate: " + frameRate);
   }
   
@@ -171,18 +181,14 @@ void draw()
   //image(pg, blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight);
   
   // Fade out the previous frame
-  translate(blobsOriginX, blobsOriginY);
-  colorMode(RGB, 100);
-  blendMode(SUBTRACT);
-  int fadeRate = 7;
-  fill(fadeRate, fadeRate, fadeRate, 100);
-  noStroke();
-  rect(0, 0, blobsRegionWidth, blobsRegionHeight);
+  fadeToBlackBy(blobsOriginX, blobsOriginY, blobsRegionWidth, blobsRegionHeight, 18);
+
   if (useKinect) {
+    pushMatrix();
+    translate(blobsOriginX, blobsOriginY);
     blobManager.update();
     
     ArrayList<KSkeleton> skeletons = kinect.getSkeletonDepthMap();
-    pushMatrix();
     translate(depthImageLoc.x, depthImageLoc.y);
     for (KSkeleton skel : skeletons) {
       DrawSkeleton(skel);
@@ -190,7 +196,6 @@ void draw()
     popMatrix();
   }
   
-  translate(-blobsOriginX, -blobsOriginY);
   
   // Copy blobs pixels into the display
   blendMode(BLEND);
