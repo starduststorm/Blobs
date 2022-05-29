@@ -224,7 +224,7 @@ void draw()
       }
     }
     
-    if (activeIdlePattern == null && spectrum != null && !spectrum.isRunning()) {
+    if (activeIdlePattern == null && (spectrum == null || !spectrum.isRunning())) {
       int choice = (int)random(idlePatterns.size());
       IdlePattern idlePattern = idlePatterns.get(choice);
       if (idlePattern != lastIdlePattern && !idlePattern.isRunning() && !idlePattern.isStopping() && idlePattern.wantsToRun()) {
