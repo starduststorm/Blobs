@@ -78,7 +78,7 @@ public class BitsPattern extends IdlePattern
   {
     if (this.isRunning()) {
       for (int i = 0; i < 2; ++i) {
-        Bit newBit = new Bit(new PVector((int)random(0, displayWidth) + 0.5, (int)random(0, displayHeight)));
+        Bit newBit = new Bit(new PVector((int)random(0, displayWidth) + 0.5, (int)random(0, displayHeight-1)));
         if (palette != null) {
           newBit.bitColor = palette.getRandom();
         } else {
