@@ -37,61 +37,84 @@ strand_thickness = 6 + 1;
 strand_count = 8;
 drill_spacing = 152;
 screw_radius_major = 1.65;
-screw_radius_head = 3.2;
+screw_radius_head = 3.2 + 0.1;
 drill_radius = screw_radius_major+0.4;
 
 base_size = [30, drill_spacing + 12, 2];
 
-divider_thickness = 0.8;
+divider_thickness = 1.0;
+screw_extra_base = base_size.z * 2.2;
+screw_extra_base_radius = base_size.z * 2.2;
 
 // platform
 difference() {
     union() {
-        rounded_rect(base_size, 10);
+        rounded_rect(base_size, 5);
         // drill base
         for (i = [0:1]) {
-            translate([base_size.x/2, i * drill_spacing + (base_size.y-drill_spacing)/2, 0]) rotate([0,0,PI/4*RAD]) cylinder(h=base_size.z*2.2, r1=drill_radius+2.2, r2=screw_radius_head);
+            translate([base_size.x/2, i * drill_spacing + (base_size.y-drill_spacing)/2, 0]) rotate([0,0,PI/4*RAD]) cylinder(h=screw_extra_base, r1=screw_extra_base_radius, r2=screw_radius_head);
+        }
+
+        // grooves
+        divider_support_radius = 2;
+        slight_y_correction = -0.4;
+        lip_overhang_size = 0.8;
+        
+        for (i = [0 : strand_count]) {
+            translate([0, (base_size.y - strand_count*(strand_width + divider_thickness))/2 + (strand_width + divider_thickness)*i + slight_y_correction, 0]) {
+                cube([base_size.x, divider_thickness, base_size.z+strand_thickness]);
+                
+                // lip
+                lip_thickness = 0.6;
+                lip_overhang = (i==0 || i == strand_count ? lip_overhang_size/2 : lip_overhang_size);
+                lip_offset = (i == 0 ? 0 : (i == strand_count ? -lip_overhang*2 : -lip_overhang));
+                translate([0,lip_offset, base_size.z+strand_thickness]) cube([base_size.x, divider_thickness+lip_overhang*2, lip_thickness]);
+                translate([0,lip_offset/2, base_size.z+strand_thickness-lip_thickness/2]) cube([base_size.x, divider_thickness+lip_overhang, lip_thickness/2]);
+                
+                
+                for (s = [0 : 4]) {
+                    // end-supports
+                    if (i == 0 || i == strand_count) {
+                        scale([1, (i == strand_count ? 1 : -1), 1])
+                            translate([0, (i == strand_count ? divider_thickness : 0), 0])
+                                rotate([0,PI/2*RAD,0]) linear_extrude(base_size.x) polygon([[0,0], [0, 4.5], [-base_size.z-strand_thickness,0]]);
+                    }
+                    // between-strand supports
+                    radius_multi = (s == 0 || s == 4 ? 1.2 : 1);
+                    translate([divider_thickness + s*(base_size.x-divider_thickness)/4, divider_thickness/2, base_size.z+divider_support_radius/2]) 
+                        rotate([0, -PI/2*RAD, 0]) 
+                            cylinder(divider_thickness,r=divider_support_radius * radius_multi,$fn=3);
+                }
+            }
+        }
+        
+        // top ring
+        for (i = [0:1]) {
+            eyelet_length = base_size.x/3;
+            eyelet_radius = 5;
+            eyelet_inner = 2;
+            translate([0, (i == 1 ? base_size.y : 0), 0]) scale([1, (i == 1 ? -1 : 1), 1]) {
+                translate([(base_size.x - eyelet_length)/2, base_size.y+eyelet_radius-eyelet_inner, eyelet_radius]) rotate([0,PI/2*RAD,0]) difference() {
+                    union() {
+                        cylinder(h=eyelet_length, r=eyelet_radius);
+                        // missing space
+                        translate([eyelet_radius-base_size.z,-eyelet_radius,0]) cube([eyelet_inner,eyelet_radius,eyelet_length]);
+                    }
+                    translate([0,0,-epsilon*4]) cylinder(h=eyelet_length*2, r=eyelet_radius-eyelet_inner);
+                }
+                
+                // triangle support
+                translate([base_size.x/2,eyelet_inner/2,0]) rotate([0,PI/2*RAD,0]) linear_extrude(eyelet_length,center=true) polygon([[0,0], [0,8], [-4, 8], [-base_size.z-eyelet_radius, 0]]);
+            }
         }
     }
     // drills
-    union() {
+    diffscale() union() {
         for (i = [0:1]) {
+            // drill
             translate([base_size.x/2, i * drill_spacing + (base_size.y-drill_spacing)/2, 0]) cylinder(h=base_size.z*2.3, r=drill_radius);
+            // space for screw head
+            translate([base_size.x/2, i * drill_spacing + (base_size.y-drill_spacing)/2, screw_extra_base]) rotate([0,0,PI/4*RAD]) cylinder(h=strand_width, r=screw_radius_head);
         }
     }
-}
-
-// grooves
-divider_support_radius = 2;
-lip_overhang = 0.8;
-slight_y_correction = -0.4;
-
-for (i = [0 : strand_count]) {
-    translate([0, (base_size.y - strand_count*(strand_width + divider_thickness))/2 + (strand_width + divider_thickness)*i + slight_y_correction, 0]) {
-        cube([base_size.x, divider_thickness, base_size.z+strand_thickness]);
-        
-        // lip
-        lip_thickness = 0.6;
-        translate([0,-lip_overhang,base_size.z+strand_thickness]) cube([base_size.x, divider_thickness+lip_overhang*2, lip_thickness]);
-        translate([0,-lip_overhang/2,base_size.z+strand_thickness-lip_thickness/2]) cube([base_size.x, divider_thickness+lip_overhang, lip_thickness/2]);
-        
-        // extra supports
-        for (s = [0 : 4]) {
-            translate([divider_thickness + s*(base_size.x-divider_thickness)/4,divider_thickness/2,base_size.z+divider_support_radius/2]) rotate([0,-PI/2*RAD,0]) cylinder(divider_thickness,r=divider_support_radius,$fn=3);
-        }
-    }
-}
-
-
-// top ring
-eyelet_length = base_size.x/3;
-eyelet_radius = 5;
-eyelet_inner = 2;
-translate([(base_size.x - eyelet_length)/2, base_size.y+eyelet_radius/1.5, eyelet_radius]) rotate([0,PI/2*RAD,0]) difference() {
-    cylinder(h=eyelet_length, r=eyelet_radius);
-    translate([0,0,-epsilon*4]) cylinder(h=eyelet_length*2, r=eyelet_radius-eyelet_inner);
-}
-translate([(base_size.x - eyelet_length)/2, base_size.y, 0]) {
-    cube([eyelet_length, eyelet_radius-eyelet_inner, eyelet_inner]);
-    translate([0,0,0.3]) rotate([-14*DEG,0,0]) translate([0, -2.9, 0]) cube([eyelet_length, eyelet_inner, eyelet_radius]);
 }
